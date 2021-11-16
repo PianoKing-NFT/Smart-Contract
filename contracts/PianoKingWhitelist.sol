@@ -37,6 +37,14 @@ contract PianoKingWhitelist is Ownable, ReentrancyGuard {
   }
 
   /**
+   * @dev Set the address of the Piano King Wallet
+   */
+  function setPianoKingWallet(address addr) external onlyOwner {
+    require(addr != address(0), "Invalid address");
+    pianoKingWallet = addr;
+  }
+
+  /**
    * @dev Get the supply left
    */
   function getSupplyLeft() external view returns (uint256) {
