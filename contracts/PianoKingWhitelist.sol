@@ -12,12 +12,12 @@ contract PianoKingWhitelist is Ownable, ReentrancyGuard {
   // Address => amount of tokens allowed for white listed address
   mapping(address => uint256) private whiteListAmount;
   address[] private whiteListedAddresses;
-  uint256 private tokenSupply = 1000;
-  uint256 private maxTokenPerAddress = 25;
-  // In wei => 0.1 Ether
-  uint256 private pricePerToken = 100000000000000000;
+  uint256 private tokenSupply;
+  uint256 private maxTokenPerAddress;
+  // In wei
+  uint256 private pricePerToken;
   // Supply left to be distributed
-  uint256 private supplyLeft = tokenSupply;
+  uint256 private supplyLeft;
 
   address private pianoKingWallet;
 
@@ -31,6 +31,7 @@ contract PianoKingWhitelist is Ownable, ReentrancyGuard {
     address pianoKingWallet_
   ) {
     tokenSupply = tokenSupply_;
+    supplyLeft = tokenSupply_;
     maxTokenPerAddress = maxTokenPerAddress_;
     pricePerToken = pricePerToken_;
     pianoKingWallet = pianoKingWallet_;
