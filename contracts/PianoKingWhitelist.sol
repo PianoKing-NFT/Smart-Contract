@@ -3,10 +3,15 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract PianoKingWhitelist is Ownable {
+contract PianoKingWhitelist is Ownable, ReentrancyGuard {
+  using Address for address payable;
+
   // Address => amount of tokens allowed for white listed address
   mapping(address => uint256) private whiteListAmount;
+  address[] private whiteListedAddresses;
   uint256 private tokenSupply = 1000;
   uint256 private maxTokenPerAddress = 25;
   // In wei => 0.1 Ether
@@ -14,38 +19,21 @@ contract PianoKingWhitelist is Ownable {
   // Supply left to be distributed
   uint256 private supplyLeft = tokenSupply;
 
-  // The address authorized to white list addresses
-  address private whiteLister;
+  address private pianoKingWallet;
 
-  bool private whiteListingEnabled = true;
+  event FundReceived(uint256 amount);
+  event AddressWhitelisted(address indexed addr, uint256 amountOfToken);
 
   constructor(
     uint256 tokenSupply_,
     uint256 maxTokenPerAddress_,
     uint256 pricePerToken_,
-    address whiteLister_
+    address pianoKingWallet_
   ) {
     tokenSupply = tokenSupply_;
     maxTokenPerAddress = maxTokenPerAddress_;
     pricePerToken = pricePerToken_;
-    whiteLister = whiteLister_;
-  }
-
-  /**
-   * @dev Check that whitelisting is enabled and the sender
-   * is the whitelister
-   */
-  modifier onlyWhitelister() {
-    require(whiteListingEnabled, "Whitelisting disabled");
-    require(msg.sender == whiteLister, "Not allowed");
-    _;
-  }
-
-  /**
-   * @dev Toggle white listing
-   */
-  function toggleWhitelisting(bool val) external onlyOwner {
-    whiteListingEnabled = val;
+    pianoKingWallet = pianoKingWallet_;
   }
 
   /**
@@ -56,30 +44,41 @@ contract PianoKingWhitelist is Ownable {
   }
 
   /**
-   * @dev Set the address allowed to white list
-   */
-  function setWhiteLister(address adr) external onlyOwner {
-    require(adr != address(0), "Invalid address");
-    whiteLister = adr;
-  }
-
-  /**
    * @dev White list an address for a given amount of tokens
    */
-  function whiteListAddress(address adr, uint256 amountToGive)
-    external
-    onlyWhitelister
-  {
+  function whiteListSender() external payable nonReentrant {
+    // We check the value is at least greater or equal to that of
+    // one token
+    require(msg.value >= pricePerToken, "Not enough funds");
+    uint256 amountOfToken = msg.value / pricePerToken;
     // We check there is enough supply left
-    require(supplyLeft >= amountToGive, "Not enough tokens left");
+    require(supplyLeft >= amountOfToken, "Not enough tokens left");
     // 25 token per address max
-    require(amountToGive <= 25, "Above maximum");
-    // Classic check for zero address
-    require(adr != address(0), "Zero address");
+    require(amountOfToken <= maxTokenPerAddress, "Above maximum");
+    // We check that if the sender has already some whitelisted tokens
+    // adding more won't go above 25
+    require(
+      amountOfToken + whiteListAmount[msg.sender] <= maxTokenPerAddress,
+      "Already too much"
+    );
+    // If the amount is set to zero then the sender
+    // is not yet whitelisted so we add it to the list
+    // of whitelisted addresses
+    if (whiteListAmount[msg.sender] == 0) {
+      whiteListedAddresses.push(msg.sender);
+    }
     // Assign the number of token to the sender
-    whiteListAmount[adr] = amountToGive;
+    whiteListAmount[msg.sender] += amountOfToken;
+
     // Remove the assigned tokens from the supply left
-    supplyLeft -= amountToGive;
+    supplyLeft -= amountOfToken;
+
+    // Forward all the funds to the token sale owners
+    payable(pianoKingWallet).sendValue(msg.value);
+
+    // Some events for easy to access info
+    emit FundReceived(msg.value);
+    emit AddressWhitelisted(msg.sender, amountOfToken);
   }
 
   /**
@@ -89,5 +88,12 @@ contract PianoKingWhitelist is Ownable {
    */
   function getWhitelistAllowance(address adr) public view returns (uint256) {
     return whiteListAmount[adr];
+  }
+
+  /**
+   * @dev Get the list of all whitelisted addresses
+   */
+  function getWhitelistedAddresses() public view returns (address[] memory) {
+    return whiteListedAddresses;
   }
 }
