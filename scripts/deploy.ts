@@ -14,10 +14,6 @@ async function main() {
   // await hre.run('compile');
 
   // We get the contract to deploy
-  const accounts = await ethers.getSigners();
-  const deployer = accounts[0];
-  const buyer = accounts[1];
-
   const Whitelist = await ethers.getContractFactory("PianoKingWhitelist");
   const whiteList = await Whitelist.deploy(
     1000,

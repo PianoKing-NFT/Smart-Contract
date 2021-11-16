@@ -13,6 +13,7 @@ describe("Whitelist", function () {
   let walletBalance: BigNumber;
   beforeEach(async () => {
     const accounts = await ethers.getSigners();
+    // The default address is the first one
     deployer = accounts[0];
     buyer = accounts[1];
 
