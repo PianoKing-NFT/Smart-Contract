@@ -15,12 +15,7 @@ async function main() {
 
   // We get the contract to deploy
   const Whitelist = await ethers.getContractFactory("PianoKingWhitelist");
-  const whiteList = await Whitelist.deploy(
-    1000,
-    25,
-    "100000000000000000",
-    process.env.PIANO_KING_WALLET as string
-  );
+  const whiteList = await Whitelist.deploy();
   await whiteList.deployed();
   console.log("Whitelist deployed to:", whiteList.address);
 }

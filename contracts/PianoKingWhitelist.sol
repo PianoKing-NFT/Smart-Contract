@@ -12,64 +12,42 @@ contract PianoKingWhitelist is Ownable, ReentrancyGuard {
   // Address => amount of tokens allowed for white listed address
   mapping(address => uint256) private whiteListAmount;
   address[] private whiteListedAddresses;
-  uint256 private tokenSupply;
-  uint256 private maxTokenPerAddress;
-  // In wei
-  uint256 private pricePerToken;
   // Supply left to be distributed
-  uint256 private supplyLeft;
+  uint256 private supplyLeft = 1000;
+  uint256 private constant MAX_TOKEN_PER_ADDRESS = 25;
+  // In wei
+  uint256 private constant PRICE_PER_TOKEN = 100000000000000000;
+  // Address authorized to withdraw the funds
+  address private pianoKingWallet = 0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586;
+  // Indicate if the sale is open
+  bool private saleOpen = true;
 
-  address private pianoKingWallet;
-
-  event FundReceived(uint256 amount);
-  event AddressWhitelisted(address indexed addr, uint256 amountOfToken);
-
-  constructor(
-    uint256 tokenSupply_,
-    uint256 maxTokenPerAddress_,
-    uint256 pricePerToken_,
-    address pianoKingWallet_
-  ) {
-    tokenSupply = tokenSupply_;
-    supplyLeft = tokenSupply_;
-    maxTokenPerAddress = maxTokenPerAddress_;
-    pricePerToken = pricePerToken_;
-    pianoKingWallet = pianoKingWallet_;
-  }
-
-  /**
-   * @dev Set the address of the Piano King Wallet
-   */
-  function setPianoKingWallet(address addr) external onlyOwner {
-    require(addr != address(0), "Invalid address");
-    pianoKingWallet = addr;
-  }
-
-  /**
-   * @dev Get the supply left
-   */
-  function getSupplyLeft() external view returns (uint256) {
-    return supplyLeft;
-  }
+  event AddressWhitelisted(
+    address indexed addr,
+    uint256 amountOfToken,
+    uint256 fundsDeposited
+  );
 
   /**
    * @dev White list an address for a given amount of tokens
    */
   function whiteListSender() external payable nonReentrant {
+    // Check that the sale is still open
+    require(saleOpen, "Sale not open");
     // We check the value is at least greater or equal to that of
     // one token
-    require(msg.value >= pricePerToken, "Not enough funds");
+    require(msg.value >= PRICE_PER_TOKEN, "Not enough funds");
     // We get the amount of tokens according to the value passed
     // by the sender. Since Solidity only supports integer numbers
     // the division will be an integer whose value is floored
     // (i.e. 15.9 => 15 and not 16)
-    uint256 amountOfToken = msg.value / pricePerToken;
+    uint256 amountOfToken = msg.value / PRICE_PER_TOKEN;
     // We check there is enough supply left
     require(supplyLeft >= amountOfToken, "Not enough tokens left");
     // Check that the amount desired by the sender is below or
     // equal to the maximum per address
     require(
-      amountOfToken + whiteListAmount[msg.sender] <= maxTokenPerAddress,
+      amountOfToken + whiteListAmount[msg.sender] <= MAX_TOKEN_PER_ADDRESS,
       "Above maximum"
     );
     // If the amount is set to zero then the sender
@@ -84,12 +62,31 @@ contract PianoKingWhitelist is Ownable, ReentrancyGuard {
     // Remove the assigned tokens from the supply left
     supplyLeft -= amountOfToken;
 
-    // Forward all the funds to the token sale owners
-    payable(pianoKingWallet).sendValue(msg.value);
-
     // Some events for easy to access info
-    emit FundReceived(msg.value);
-    emit AddressWhitelisted(msg.sender, amountOfToken);
+    emit AddressWhitelisted(msg.sender, amountOfToken, msg.value);
+  }
+
+  /**
+   * @dev Set the address of the Piano King Wallet
+   */
+  function setPianoKingWallet(address addr) external onlyOwner {
+    require(addr != address(0), "Invalid address");
+    pianoKingWallet = addr;
+  }
+
+  /**
+    @dev Set the status of the sale
+    @param open Whether the sale is open
+   */
+  function setSaleStatus(bool open) external onlyOwner {
+    saleOpen = open;
+  }
+
+  /**
+   * @dev Get the supply left
+   */
+  function getSupplyLeft() external view returns (uint256) {
+    return supplyLeft;
   }
 
   /**
@@ -106,5 +103,14 @@ contract PianoKingWhitelist is Ownable, ReentrancyGuard {
    */
   function getWhitelistedAddresses() public view returns (address[] memory) {
     return whiteListedAddresses;
+  }
+
+  /**
+   * @dev Retrieve the funds of the sale
+   */
+  function retrieveFunds() external {
+    // Only the Piano King Wallet can withraw the funds
+    require(msg.sender == pianoKingWallet, "Not allowed");
+    payable(pianoKingWallet).sendValue(address(this).balance);
   }
 }

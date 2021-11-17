@@ -1,16 +1,14 @@
-import { BigNumber } from "@ethersproject/bignumber";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { PianoKingWhitelist } from "../typechain";
 
-const pianoKingWallet = process.env.PIANO_KING_WALLET as string;
-
 describe("Whitelist", function () {
   let whiteList: PianoKingWhitelist;
   let deployer: SignerWithAddress;
   let buyer: SignerWithAddress;
-  let walletBalance: BigNumber;
+  let pianoKingWallet: SignerWithAddress;
+  // let walletBalance: BigNumber;
   beforeEach(async () => {
     // Get the local accounts
     const accounts = await ethers.getSigners();
@@ -18,24 +16,16 @@ describe("Whitelist", function () {
     deployer = accounts[0];
     // Set the buyer to be the second account
     buyer = accounts[1];
+    // The address allowed to withdraw the funds
+    // from the contract
+    pianoKingWallet = accounts[2];
 
     // Deploys the whitelist contract
     const Whitelist = await ethers.getContractFactory("PianoKingWhitelist");
-    whiteList = await Whitelist.deploy(
-      // 1000 NFTs for the pre-sale
-      1000,
-      // 25 NFTs per address maximum
-      25,
-      // 0.1 ETH in Wei, setting the price of each NFT in the pre-sale
-      "100000000000000000",
-      // The address of the wallet that will receive all the funds
-      // sent to the contract
-      process.env.PIANO_KING_WALLET as string
-    );
+    whiteList = await Whitelist.deploy();
     await whiteList.deployed();
 
-    // Get the balance of the wallet set to receive the funds
-    walletBalance = await ethers.provider.getBalance(pianoKingWallet);
+    whiteList.setPianoKingWallet(pianoKingWallet.address);
   });
 
   it("Should not be able to deposit ETH", async function () {
@@ -72,12 +62,9 @@ describe("Whitelist", function () {
     expect(await whiteList.getWhitelistedAddresses()).to.contain(buyer.address);
     // The supply should have decreased by 1
     expect(await whiteList.getSupplyLeft()).to.be.equal(999);
-    // We expect the contract to have forwaded the fund to the Piano King wallet
-    // so the contract should not hold any ETH and the wallet should have the ETH
-    // sent by the user
-    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(0);
-    expect(await ethers.provider.getBalance(pianoKingWallet)).to.be.equal(
-      walletBalance.add(ethers.utils.parseEther("0.1"))
+    // We expect the contract to have received 0.1 ETH from the sender
+    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(
+      ethers.utils.parseEther("0.1")
     );
   });
 
@@ -101,9 +88,9 @@ describe("Whitelist", function () {
     // We expect the contract to have forwaded the fund to the Piano King wallet
     // so the contract should not hold any ETH and the wallet should have the ETH
     // sent by the user
-    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(0);
-    expect(await ethers.provider.getBalance(pianoKingWallet)).to.be.equal(
-      walletBalance.add(ethers.utils.parseEther("1"))
+    // We expect the contract to have received 1 ETH from the sender
+    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(
+      ethers.utils.parseEther("1")
     );
   });
 
@@ -120,12 +107,9 @@ describe("Whitelist", function () {
     );
     // 1000 - 25 = 975
     expect(await whiteList.getSupplyLeft()).to.be.equal(975);
-    // We expect the contract to have forwaded the fund to the Piano King wallet
-    // so the contract should not hold any ETH and the wallet should have the ETH
-    // sent by the user
-    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(0);
-    expect(await ethers.provider.getBalance(pianoKingWallet)).to.be.equal(
-      walletBalance.add(ethers.utils.parseEther("2.5"))
+    // We expect the contract to have received 2.5 ETH from the sender
+    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(
+      ethers.utils.parseEther("2.5")
     );
   });
 
@@ -144,9 +128,6 @@ describe("Whitelist", function () {
     expect(await whiteList.getSupplyLeft()).to.be.equal(1000);
     // Should not have changed
     expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(0);
-    expect(await ethers.provider.getBalance(pianoKingWallet)).to.be.equal(
-      walletBalance
-    );
   });
 
   it("Should whitelist the sender for 15 tokens when providing 1.59 ETH", async function () {
@@ -169,11 +150,10 @@ describe("Whitelist", function () {
     // We expect the contract to have forwaded the fund to the Piano King wallet
     // so the contract should not hold any ETH and the wallet should have the ETH
     // sent by the user
-    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(0);
-    // The wallet should have the received the excess as well as the value of
+    // The contract should have the received the excess as well as the value of
     // the NFTs
-    expect(await ethers.provider.getBalance(pianoKingWallet)).to.be.equal(
-      walletBalance.add(ethers.utils.parseEther("1.59"))
+    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(
+      ethers.utils.parseEther("1.59")
     );
   });
 
@@ -193,12 +173,9 @@ describe("Whitelist", function () {
     expect(await whiteList.getSupplyLeft()).to.be.equal(990);
     expect(await whiteList.getWhitelistedAddresses()).to.contain(buyer.address);
     expect(await whiteList.getWhitelistedAddresses()).to.be.length(1);
-    // We expect the contract to have forwaded the fund to the Piano King wallet
-    // so the contract should not hold any ETH and the wallet should have the ETH
-    // sent by the user
-    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(0);
-    expect(await ethers.provider.getBalance(pianoKingWallet)).to.be.equal(
-      walletBalance.add(ethers.utils.parseEther("1"))
+    // We expect the contract to have received 1 ETH from the sender
+    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(
+      ethers.utils.parseEther("1")
     );
     const tx2 = await whiteList.connect(buyer).whiteListSender({
       value: ethers.utils.parseEther("1"),
@@ -211,12 +188,9 @@ describe("Whitelist", function () {
     // We check that the lenght is still to make sure the sender wasn't added twice
     expect(await whiteList.getWhitelistedAddresses()).to.be.length(1);
     expect(await whiteList.getSupplyLeft()).to.be.equal(980);
-    // We expect the contract to have forwaded the fund to the Piano King wallet
-    // so the contract should not hold any ETH and the wallet should have the ETH
-    // sent by the users
-    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(0);
-    expect(await ethers.provider.getBalance(pianoKingWallet)).to.be.equal(
-      walletBalance.add(ethers.utils.parseEther("2"))
+    // We expect the contract to have received 1 more ETH from the sender
+    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(
+      ethers.utils.parseEther("2")
     );
   });
 
@@ -231,12 +205,9 @@ describe("Whitelist", function () {
       10
     );
     expect(await whiteList.getSupplyLeft()).to.be.equal(990);
-    // We expect the contract to have forwaded the fund to the Piano King wallet
-    // so the contract should not hold any ETH and the wallet should have the ETH
-    // sent by the user
-    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(0);
-    expect(await ethers.provider.getBalance(pianoKingWallet)).to.be.equal(
-      walletBalance.add(ethers.utils.parseEther("1"))
+    // We expect the contract to have received 1 ETH from the sender
+    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(
+      ethers.utils.parseEther("1")
     );
     // After getting 10 tokens, the sender tries to get 20 more by sending 2 ETH
     // But that would increase the total to 30 after completion, so it should not
@@ -251,9 +222,75 @@ describe("Whitelist", function () {
     );
     expect(await whiteList.getSupplyLeft()).to.be.equal(990);
     // Should be the same as before since the second transaction failed
-    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(0);
-    expect(await ethers.provider.getBalance(pianoKingWallet)).to.be.equal(
-      walletBalance.add(ethers.utils.parseEther("1"))
+    expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(
+      ethers.utils.parseEther("1")
     );
+  });
+
+  it("Should be able to withraw the funds as authorized sender", async function () {
+    let contractBalance = await ethers.provider.getBalance(whiteList.address);
+    // We expect the contract to have no funds here
+    expect(contractBalance).to.be.equal(0);
+    // A buyer deposit 2 ETH
+    const tx = await whiteList.connect(buyer).whiteListSender({
+      value: ethers.utils.parseEther("2"),
+    });
+    tx.wait(1);
+    // Get the balance of the Piano King Wallet which should be 10,000 ETH
+    // the default value of test accounts on hardhat network
+    let walletBalance = await ethers.provider.getBalance(
+      pianoKingWallet.address
+    );
+    expect(walletBalance).to.be.equal(ethers.utils.parseEther("10000"));
+
+    // The contract should now hold the 2 ETH
+    contractBalance = await ethers.provider.getBalance(whiteList.address);
+    expect(contractBalance).to.be.equal(ethers.utils.parseEther("2"));
+    const withdrawTx = await whiteList.connect(pianoKingWallet).retrieveFunds();
+    withdrawTx.wait(1);
+    // Get the balance of the Piano King Wallet again, which has received
+    // the 2 ETH from the contract
+    walletBalance = await ethers.provider.getBalance(pianoKingWallet.address);
+    // We expect slightly less than 10002 ETH since we also paid some
+    // gas fee in the transaction
+    expect(walletBalance).to.be.closeTo(
+      ethers.utils.parseEther("10002"),
+      // Small enough for Javascript number
+      ethers.utils.parseEther("0.001").toNumber()
+    );
+    // The funds have been withdrawn so now the contract should not
+    // have any ETH
+    contractBalance = await ethers.provider.getBalance(whiteList.address);
+    expect(contractBalance).to.be.equal(0);
+  });
+
+  it("Should not be able to withraw the funds as unauthorized sender", async function () {
+    // The buyer is not authorized to withdraw the funds so we expect the transaction
+    // to be rejected
+    await expect(whiteList.connect(buyer).retrieveFunds()).to.be.revertedWith(
+      "Not allowed"
+    );
+  });
+
+  it("Should not let sender get whitelisted when the sale is not open", async function () {
+    // We close the sale
+    const closeSaleTx = await whiteList.setSaleStatus(false);
+    closeSaleTx.wait(1);
+    // We then expect the buyer to fail trying to get whitelisted
+    // as the sale is not open
+    await expect(
+      whiteList.connect(buyer).whiteListSender({
+        value: ethers.utils.parseEther("1"),
+      })
+    ).to.be.revertedWith("Sale not open");
+    // We re-open the sale
+    const openSaleTx = await whiteList.setSaleStatus(true);
+    openSaleTx.wait(1);
+    // This time the buyer should be able to get whitelisted
+    await expect(
+      whiteList.connect(buyer).whiteListSender({
+        value: ethers.utils.parseEther("1"),
+      })
+    ).to.be.not.reverted;
   });
 });
