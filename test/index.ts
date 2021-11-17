@@ -30,9 +30,9 @@ describe("Whitelist", function () {
 
   it("Should not be able to deposit ETH", async function () {
     // Not receive nor fallback function has been implemented so
-    // we should expect that any ETH not send with the whiteListSender
+    // we should expect that any ETH not sent with the whiteListSender
     // function will not be accepted and the transaction reverted
-    // That way the only to deposit ETH on the smart contract is to
+    // That way the only way to deposit ETH on the smart contract is to
     // go through the whiteListSender function.
     await expect(
       buyer.sendTransaction({
@@ -227,7 +227,7 @@ describe("Whitelist", function () {
     );
   });
 
-  it("Should be able to withraw the funds as authorized sender", async function () {
+  it("Should be able to withraw the funds as Piano King Wallet", async function () {
     let contractBalance = await ethers.provider.getBalance(whiteList.address);
     // We expect the contract to have no funds here
     expect(contractBalance).to.be.equal(0);
@@ -258,6 +258,51 @@ describe("Whitelist", function () {
       // Small enough for Javascript number
       ethers.utils.parseEther("0.001").toNumber()
     );
+    // The funds have been withdrawn so now the contract should not
+    // have any ETH
+    contractBalance = await ethers.provider.getBalance(whiteList.address);
+    expect(contractBalance).to.be.equal(0);
+  });
+
+  it("Should be able to withraw the funds as owner", async function () {
+    const accounts = await ethers.getSigners();
+    // Get a new address to set a new Piano King wallet as the original
+    // one has already been used in the previous test
+    const newPianoKingWallet = accounts[5];
+    const setPianoKingWalletTx = await whiteList.setPianoKingWallet(
+      newPianoKingWallet.address
+    );
+    setPianoKingWalletTx.wait(1);
+
+    let contractBalance = await ethers.provider.getBalance(whiteList.address);
+    // We expect the contract to have no funds here
+    expect(contractBalance).to.be.equal(0);
+    // A buyer deposit 2 ETH
+    const tx = await whiteList.connect(buyer).whiteListSender({
+      value: ethers.utils.parseEther("2"),
+    });
+    tx.wait(1);
+    // Get the balance of the Piano King wallet which should be 10,000 ETH
+    // the default value of test accounts on hardhat network
+    let walletBalance = await ethers.provider.getBalance(
+      newPianoKingWallet.address
+    );
+    expect(walletBalance).to.be.equal(ethers.utils.parseEther("10000"));
+
+    // The contract should now hold the 2 ETH
+    contractBalance = await ethers.provider.getBalance(whiteList.address);
+    expect(contractBalance).to.be.equal(ethers.utils.parseEther("2"));
+    // Not necessary as it's already the default account, but let's be
+    // completely explicit
+    const withdrawTx = await whiteList.connect(deployer).retrieveFunds();
+    withdrawTx.wait(1);
+    // Get the balance of the Piano King wallet again, which has received
+    // the 2 ETH from the contract
+    walletBalance = await ethers.provider.getBalance(
+      newPianoKingWallet.address
+    );
+    // We expect exactly 10002 ETH since the fees have been paid by the owner
+    expect(walletBalance).to.be.equal(ethers.utils.parseEther("10002"));
     // The funds have been withdrawn so now the contract should not
     // have any ETH
     contractBalance = await ethers.provider.getBalance(whiteList.address);

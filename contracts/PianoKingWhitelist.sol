@@ -109,8 +109,11 @@ contract PianoKingWhitelist is Ownable, ReentrancyGuard {
    * @dev Retrieve the funds of the sale
    */
   function retrieveFunds() external {
-    // Only the Piano King Wallet can withraw the funds
-    require(msg.sender == pianoKingWallet, "Not allowed");
+    // Only the Piano King Wallet or the owner can withraw the funds
+    require(
+      msg.sender == pianoKingWallet || msg.sender == owner(),
+      "Not allowed"
+    );
     payable(pianoKingWallet).sendValue(address(this).balance);
   }
 }
