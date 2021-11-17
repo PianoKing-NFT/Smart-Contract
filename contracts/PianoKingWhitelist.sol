@@ -59,16 +59,18 @@ contract PianoKingWhitelist is Ownable, ReentrancyGuard {
     // We check the value is at least greater or equal to that of
     // one token
     require(msg.value >= pricePerToken, "Not enough funds");
+    // We get the amount of tokens according to the value passed
+    // by the sender. Since Solidity only supports integer numbers
+    // the division will be an integer whose value is floored
+    // (i.e. 15.9 => 15 and not 16)
     uint256 amountOfToken = msg.value / pricePerToken;
     // We check there is enough supply left
     require(supplyLeft >= amountOfToken, "Not enough tokens left");
-    // 25 token per address max
-    require(amountOfToken <= maxTokenPerAddress, "Above maximum");
-    // We check that if the sender has already some whitelisted tokens
-    // adding more won't go above 25
+    // Check that the amount desired by the sender is below or
+    // equal to the maximum per address
     require(
       amountOfToken + whiteListAmount[msg.sender] <= maxTokenPerAddress,
-      "Already too much"
+      "Above maximum"
     );
     // If the amount is set to zero then the sender
     // is not yet whitelisted so we add it to the list

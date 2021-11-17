@@ -29,6 +29,11 @@ const config: HardhatUserConfig = {
       // To fix an issue with Metamask
       chainId: 1337,
     },
+    mainnet: {
+      url: process.env.MAINNET_URL || "",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
       accounts:
