@@ -29,7 +29,7 @@ describe("Whitelist", function () {
   });
 
   it("Should not be able to deposit ETH", async function () {
-    // Not receive nor fallback function has been implemented so
+    // No receive nor fallback function has been implemented so
     // we should expect that any ETH not sent with the whiteListSender
     // function will not be accepted and the transaction reverted
     // That way the only way to deposit ETH on the smart contract is to
@@ -85,9 +85,6 @@ describe("Whitelist", function () {
     expect(await whiteList.getWhitelistedAddresses()).to.contain(buyer.address);
     // 1000 - 10 = 990
     expect(await whiteList.getSupplyLeft()).to.be.equal(990);
-    // We expect the contract to have forwaded the fund to the Piano King wallet
-    // so the contract should not hold any ETH and the wallet should have the ETH
-    // sent by the user
     // We expect the contract to have received 1 ETH from the sender
     expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(
       ethers.utils.parseEther("1")
@@ -136,7 +133,7 @@ describe("Whitelist", function () {
     // The contract will floor the number of ETH sent to it so
     // that any excess of ETH not being enough to count for one more
     // NFT will not count for one more NFT. The excess will still be kept
-    // by the smart contract and forwarded to the wallet
+    // by the smart contract
     const tx = await whiteList.connect(buyer).whiteListSender({
       value: ethers.utils.parseEther("1.59"),
     });
@@ -147,9 +144,6 @@ describe("Whitelist", function () {
     );
     // 1000 - 15 = 985
     expect(await whiteList.getSupplyLeft()).to.be.equal(985);
-    // We expect the contract to have forwaded the fund to the Piano King wallet
-    // so the contract should not hold any ETH and the wallet should have the ETH
-    // sent by the user
     // The contract should have the received the excess as well as the value of
     // the NFTs
     expect(await ethers.provider.getBalance(whiteList.address)).to.be.equal(
@@ -185,7 +179,7 @@ describe("Whitelist", function () {
       20
     );
     expect(await whiteList.getWhitelistedAddresses()).to.contain(buyer.address);
-    // We check that the lenght is still to make sure the sender wasn't added twice
+    // We check that the length is still 1 to make sure the sender wasn't added twice
     expect(await whiteList.getWhitelistedAddresses()).to.be.length(1);
     expect(await whiteList.getSupplyLeft()).to.be.equal(980);
     // We expect the contract to have received 1 more ETH from the sender
@@ -292,8 +286,8 @@ describe("Whitelist", function () {
     // The contract should now hold the 2 ETH
     contractBalance = await ethers.provider.getBalance(whiteList.address);
     expect(contractBalance).to.be.equal(ethers.utils.parseEther("2"));
-    // Not necessary as it's already the default account, but let's be
-    // completely explicit
+    // Not necessary to use connect as it's already the default account,
+    // but let's be completely explicit
     const withdrawTx = await whiteList.connect(deployer).retrieveFunds();
     withdrawTx.wait(1);
     // Get the balance of the Piano King wallet again, which has received
