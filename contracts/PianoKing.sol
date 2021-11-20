@@ -5,19 +5,50 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./PianoKingWhitelist.sol";
+import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 
-contract PianoKing is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
+contract PianoKing is
+  ERC721,
+  ERC721Enumerable,
+  ERC721URIStorage,
+  Ownable,
+  VRFConsumerBase
+{
   // Default value of bool is false in Solidity (any unassigned variable will be
   // set to its zero state, e.g. 0 for uint256, Zero address for address),
   // so it's better not to assign it manually since this would consume more gas
   // Indicate whether the presale tokens have distributed
   bool private preSaleTokensDistributed;
-  // The amount in Wei required to give this contract to mint an NFT
+  // The amount in Wei (0.25 ETH by default) required to give this contract to mint an NFT
   uint256 public minPrice = 250000000000000000;
   // The max supply possible is 10,000 tokens
   uint16 public constant MAX_SUPPLY = 10000;
 
-  constructor() ERC721("PianoKing", "PK") {}
+  PianoKingWhitelist private pianoKingWhitelist;
+  address public pianoKingWallet;
+
+  // Mapping the Randomness request id to the address
+  // trying to mint a token
+  mapping(bytes32 => address) private requestIdToAddress;
+
+  // Data for chainlink
+  bytes32 public keyhash;
+  uint256 public fee;
+
+  event RequestedRandomness(bytes32 indexed requestId, address requester);
+
+  constructor(
+    address _pianoKingWhitelistAddress,
+    address _vrfCoordinator,
+    address _linkToken,
+    bytes32 _keyhash,
+    uint256 _fee
+  ) VRFConsumerBase(_vrfCoordinator, _linkToken) ERC721("PianoKing", "PK") {
+    keyhash = _keyhash;
+    fee = _fee;
+    pianoKingWhitelist = PianoKingWhitelist(_pianoKingWhitelistAddress);
+  }
 
   function _baseURI() internal pure override returns (string memory) {
     // TO-DO: replace this url by the base url where the metadata
@@ -47,6 +78,14 @@ contract PianoKing is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
     // The sender must send at least the min price to mint
     // and acquire the NFT
     require(msg.value >= minPrice, "Not enough funds");
+    // We need some LINK to pay a fee to the oracles
+    require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK");
+    // Request a random number to Chainlink oracles
+    bytes32 requestId = requestRandomness(keyhash, fee);
+    // Link the request id to the sender to retrieve it
+    // later when the random number is received
+    requestIdToAddress[requestId] = msg.sender;
+    emit RequestedRandomness(requestId, msg.sender);
     //_safeMint(msg.sender, tokenId);
     //_setTokenURI(tokenId, uri);
   }
@@ -64,6 +103,65 @@ contract PianoKing is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
      */
     // The distribution can only be done once for the presale
     require(!preSaleTokensDistributed, "Distributed already");
+    // We need some LINK to pay a fee to the oracles
+    require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK");
+    // Request a random number to Chainlink oracles
+    bytes32 requestId = requestRandomness(keyhash, fee);
+    // Link the request id to the contract address indicating
+    // that this request has been made with the mintPreSaleTokens
+    requestIdToAddress[requestId] = address(this);
+    emit RequestedRandomness(requestId, address(this));
+  }
+
+  /**
+   * Called by Chainlink oracles when sending back a random number for
+   * a given request
+   * This function cannot use more than 200,000 gas or the transaction
+   * will fail
+   */
+  function fulfillRandomness(bytes32 requestId, uint256 randomNumber)
+    internal
+    override
+  {
+    address requester = requestIdToAddress[requestId];
+    // Request made by the contract so coming from the mintPreSaleTokens function
+    if (requester == address(this)) {
+      _mintPresaleTokens(randomNumber);
+    } else {
+      // Request made by a random sender
+      //_safeMint(requestIdToAddress[requestId], tokenId);
+    }
+  }
+
+  function _mintPresaleTokens(uint256 randomNumber) private {
+    address[] memory whiteListedAddresses = pianoKingWhitelist
+      .getWhitelistedAddresses();
+    for (uint256 i = 0; i < whiteListedAddresses.length; i++) {
+      address whiteListedAddress = whiteListedAddresses[i];
+      uint256 allowance = pianoKingWhitelist.getWhitelistAllowance(
+        whiteListedAddress
+      );
+      for (uint256 j = 0; j < allowance; j++) {
+        // _safeMint(whiteListedAddress, tokenId);
+      }
+    }
+    preSaleTokensDistributed = true;
+  }
+
+  /**
+   * @dev Set the address of the Piano King Wallet
+   */
+  function setPianoKingWallet(address addr) external onlyOwner {
+    require(addr != address(0), "Invalid address");
+    pianoKingWallet = addr;
+  }
+
+  /**
+   * @dev Set the min price of the tokens
+   */
+  function setMinPrice(uint256 price) external onlyOwner {
+    // Not setting any constraints on the price we can set
+    minPrice = price;
   }
 
   // The following functions are overrides required by Solidity.
