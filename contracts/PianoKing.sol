@@ -8,6 +8,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./PianoKingWhitelist.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 
+/**
+ * Some optimizations will be necessary before deploying to production.
+ * For now it's just a draft
+ */
 contract PianoKing is
   ERC721,
   ERC721Enumerable,
@@ -21,20 +25,20 @@ contract PianoKing is
   // Indicate whether the presale tokens have distributed
   bool private preSaleTokensDistributed;
   // The amount in Wei (0.25 ETH by default) required to give this contract to mint an NFT
-  uint256 public minPrice = 250000000000000000;
+  uint256 private minPrice = 250000000000000000;
   // The max supply possible is 10,000 tokens
-  uint16 public constant MAX_SUPPLY = 10000;
+  uint16 private constant MAX_SUPPLY = 10000;
 
   PianoKingWhitelist private pianoKingWhitelist;
-  address public pianoKingWallet;
+  address private pianoKingWallet;
 
   // Mapping the Randomness request id to the address
   // trying to mint a token
   mapping(bytes32 => address) private requestIdToAddress;
 
   // Data for chainlink
-  bytes32 public keyhash;
-  uint256 public fee;
+  bytes32 private keyhash;
+  uint256 private fee;
 
   event RequestedRandomness(bytes32 indexed requestId, address requester);
 
@@ -48,15 +52,6 @@ contract PianoKing is
     keyhash = _keyhash;
     fee = _fee;
     pianoKingWhitelist = PianoKingWhitelist(_pianoKingWhitelistAddress);
-  }
-
-  function _baseURI() internal pure override returns (string memory) {
-    // TO-DO: replace this url by the base url where the metadata
-    // of each token will be stored.
-    // It will be either a centralized server or on IPFS, TBD
-    // See OpenSea docs for the metadata standards:
-    // https://docs.opensea.io/docs/metadata-standards
-    return "https://example.com/";
   }
 
   function safeMint(
@@ -86,8 +81,6 @@ contract PianoKing is
     // later when the random number is received
     requestIdToAddress[requestId] = msg.sender;
     emit RequestedRandomness(requestId, msg.sender);
-    //_safeMint(msg.sender, tokenId);
-    //_setTokenURI(tokenId, uri);
   }
 
   function mintPreSaleTokens() external onlyOwner {
@@ -129,7 +122,13 @@ contract PianoKing is
       _mintPresaleTokens(randomNumber);
     } else {
       // Request made by a random sender
-      //_safeMint(requestIdToAddress[requestId], tokenId);
+      // We use tokenSupply to avoid a case, albeit very unlikely, in which the same
+      // random number has been returned twice by the oracle for the same
+      // address. In such case if we used a static number like 0 it would result in
+      // the same tokenId which will revert the transaction although the sender
+      // already paid for the token previously while initiating the randomness request
+      uint256 tokenId = generateTokenId(requester, randomNumber, totalSupply());
+      _safeMint(requester, tokenId);
     }
   }
 
@@ -142,10 +141,30 @@ contract PianoKing is
         whiteListedAddress
       );
       for (uint256 j = 0; j < allowance; j++) {
-        // _safeMint(whiteListedAddress, tokenId);
+        uint256 tokenId = generateTokenId(
+          whiteListedAddress,
+          randomNumber,
+          i * j
+        );
+        _safeMint(whiteListedAddress, tokenId);
       }
     }
     preSaleTokensDistributed = true;
+  }
+
+  /**
+   * @dev Generate a tokenId by hashing a random number with the address
+   * of the recipient and a nonce
+   * @param recipient Address which will receive the token
+   * @param randomNumber Random number which has previously provided by an oracle
+   * @param nonce A number useful to generate
+   */
+  function generateTokenId(
+    address recipient,
+    uint256 randomNumber,
+    uint256 nonce
+  ) private pure returns (uint256) {
+    return uint256(keccak256(abi.encodePacked(randomNumber, recipient, nonce)));
   }
 
   /**
@@ -162,6 +181,14 @@ contract PianoKing is
   function setMinPrice(uint256 price) external onlyOwner {
     // Not setting any constraints on the price we can set
     minPrice = price;
+  }
+
+  /**
+   * @dev Set the address of the Piano King Whitelist
+   */
+  function setWhitelist(address addr) external onlyOwner {
+    require(addr != address(0), "Invalid address");
+    pianoKingWhitelist = PianoKingWhitelist(addr);
   }
 
   // The following functions are overrides required by Solidity.
@@ -196,5 +223,24 @@ contract PianoKing is
     returns (bool)
   {
     return super.supportsInterface(interfaceId);
+  }
+
+  // View and pure functions
+
+  function _baseURI() internal pure override returns (string memory) {
+    // TO-DO: replace this url by the base url where the metadata
+    // of each token will be stored.
+    // It will be either a centralized server or on IPFS, TBD
+    // See OpenSea docs for the metadata standards:
+    // https://docs.opensea.io/docs/metadata-standards
+    return "https://example.com/";
+  }
+
+  function getMinPrice() external view returns (uint256) {
+    return minPrice;
+  }
+
+  function getPianoKingWallet() external view returns (address) {
+    return pianoKingWallet;
   }
 }
