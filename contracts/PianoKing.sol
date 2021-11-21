@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./PianoKingWhitelist.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
+import "./lib/ArrayUtils.sol";
 
 /**
  * Some optimizations will be necessary before deploying to production.
@@ -19,6 +20,7 @@ contract PianoKing is
   Ownable,
   VRFConsumerBase
 {
+  using ArrayUtils for uint256[];
   // Default value of bool is false in Solidity (any unassigned variable will be
   // set to its zero state, e.g. 0 for uint256, Zero address for address),
   // so it's better not to assign it manually since this would consume more gas
@@ -28,6 +30,8 @@ contract PianoKing is
   uint256 private minPrice = 250000000000000000;
   // The max supply possible is 10,000 tokens
   uint16 private constant MAX_SUPPLY = 10000;
+  // Contains the ids of tokens left to mint
+  uint256[] private idsLeft;
 
   PianoKingWhitelist private pianoKingWhitelist;
   address private pianoKingWallet;
@@ -53,6 +57,10 @@ contract PianoKing is
     keyhash = _keyhash;
     fee = _fee;
     pianoKingWhitelist = PianoKingWhitelist(_pianoKingWhitelistAddress);
+    // Initialize the array of ids left to all the possible ids 1 to 10,000 (inclusive)
+    for (uint256 i = 1; i <= MAX_SUPPLY; i++) {
+      idsLeft.push(i);
+    }
   }
 
   function safeMint(
@@ -92,16 +100,6 @@ contract PianoKing is
   }
 
   function mintPreSaleTokens() external onlyOwner {
-    /**
-     * TO-DO: implement the logic to mint randomly
-     * (using Chainlink, so 2 functions will be needed)
-     * the 1000 tokens bought during the presale
-     * and transfer them to their respective owner
-     * by looping through the array of whitelisted
-     * addresses of PianoKingWhitelist contract
-     * and use the relevant mapping to check how many NTFs
-     * an address has bought
-     */
     // The distribution can only be done once for the presale
     require(!preSaleTokensDistributed, "Distributed already");
     // We need some LINK to pay a fee to the oracles
@@ -130,12 +128,7 @@ contract PianoKing is
       _mintPresaleTokens(randomNumber);
     } else {
       // Request made by a random sender
-      // We use tokenSupply to avoid a case, albeit very unlikely, in which the same
-      // random number has been returned twice by the oracle for the same
-      // address. In such case if we used a static number like 0 it would result in
-      // the same tokenId which will revert the transaction although the sender
-      // already paid for the token previously while initiating the randomness request
-      uint256 tokenId = generateTokenId(requester, randomNumber, totalSupply());
+      uint256 tokenId = generateTokenId(randomNumber);
       _safeMint(requester, tokenId);
     }
   }
@@ -143,18 +136,18 @@ contract PianoKing is
   function _mintPresaleTokens(uint256 randomNumber) private {
     address[] memory whiteListedAddresses = pianoKingWhitelist
       .getWhitelistedAddresses();
-    uint256 nonce;
     for (uint256 i = 0; i < whiteListedAddresses.length; i++) {
       address whiteListedAddress = whiteListedAddresses[i];
       uint256 allowance = pianoKingWhitelist.getWhitelistAllowance(
         whiteListedAddress
       );
       for (uint256 j = 0; j < allowance; j++) {
-        uint256 tokenId = generateTokenId(
-          whiteListedAddress,
-          randomNumber,
-          nonce++
+        // Generate a number from the random number for the given
+        // address and this given token to be minted
+        uint256 localRandomNumber = uint256(
+          keccak256(abi.encodePacked(whiteListedAddress, randomNumber, j))
         );
+        uint256 tokenId = generateTokenId(localRandomNumber);
         _safeMint(whiteListedAddress, tokenId);
       }
     }
@@ -162,18 +155,19 @@ contract PianoKing is
   }
 
   /**
-   * @dev Generate a tokenId by hashing a random number with the address
-   * of the recipient and a nonce
-   * @param recipient Address which will receive the token
+   * @dev Pick a random token id among the ones still available
    * @param randomNumber Random number which has previously provided by an oracle
-   * @param nonce A number useful to generate
    */
-  function generateTokenId(
-    address recipient,
-    uint256 randomNumber,
-    uint256 nonce
-  ) private pure returns (uint256) {
-    return uint256(keccak256(abi.encodePacked(randomNumber, recipient, nonce)));
+  function generateTokenId(uint256 randomNumber) private returns (uint256) {
+    // Get a random index from the random number
+    // by constraining it to the modulo of the length
+    // of the array of remaining ids to be minted
+    uint256 randomIndex = randomNumber % idsLeft.length;
+    // It's going to be minted so we remove it from the ids
+    // left to be minted
+    idsLeft.removeAt(randomIndex);
+    // Return the id at the random index
+    return idsLeft[randomIndex];
   }
 
   /**
