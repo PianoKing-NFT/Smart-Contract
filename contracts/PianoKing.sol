@@ -41,6 +41,7 @@ contract PianoKing is
   uint256 private fee;
 
   event RequestedRandomness(bytes32 indexed requestId, address requester);
+  event LinkBalanceLow(uint256 amountLeft);
 
   constructor(
     address _pianoKingWhitelistAddress,
@@ -73,14 +74,21 @@ contract PianoKing is
     // The sender must send at least the min price to mint
     // and acquire the NFT
     require(msg.value >= minPrice, "Not enough funds");
+    uint256 linkBalance = LINK.balanceOf(address(this));
     // We need some LINK to pay a fee to the oracles
-    require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK");
+    require(linkBalance >= fee, "Not enough LINK");
     // Request a random number to Chainlink oracles
     bytes32 requestId = requestRandomness(keyhash, fee);
     // Link the request id to the sender to retrieve it
     // later when the random number is received
     requestIdToAddress[requestId] = msg.sender;
     emit RequestedRandomness(requestId, msg.sender);
+    // If there's only enough LINK left for 10 or less oracle requests
+    // we emit an event we can listen to remind us to
+    // replenish the contract with LINK tokens
+    if (linkBalance <= fee * 10) {
+      emit LinkBalanceLow(linkBalance);
+    }
   }
 
   function mintPreSaleTokens() external onlyOwner {
