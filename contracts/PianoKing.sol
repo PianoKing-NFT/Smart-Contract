@@ -135,6 +135,7 @@ contract PianoKing is
   function _mintPresaleTokens(uint256 randomNumber) private {
     address[] memory whiteListedAddresses = pianoKingWhitelist
       .getWhitelistedAddresses();
+    uint256 nonce;
     for (uint256 i = 0; i < whiteListedAddresses.length; i++) {
       address whiteListedAddress = whiteListedAddresses[i];
       uint256 allowance = pianoKingWhitelist.getWhitelistAllowance(
@@ -144,7 +145,7 @@ contract PianoKing is
         uint256 tokenId = generateTokenId(
           whiteListedAddress,
           randomNumber,
-          (i + 1) * (j + 1)
+          nonce++
         );
         _safeMint(whiteListedAddress, tokenId);
       }
