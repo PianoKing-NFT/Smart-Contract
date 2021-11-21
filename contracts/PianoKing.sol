@@ -144,7 +144,7 @@ contract PianoKing is
         uint256 tokenId = generateTokenId(
           whiteListedAddress,
           randomNumber,
-          i * j
+          (i + 1) * (j + 1)
         );
         _safeMint(whiteListedAddress, tokenId);
       }
