@@ -163,11 +163,13 @@ contract PianoKing is
     // by constraining it to the modulo of the length
     // of the array of remaining ids to be minted
     uint256 randomIndex = randomNumber % idsLeft.length;
+    // Store the tokenId since we're removing it straight after
+    uint256 tokenId = idsLeft[randomIndex];
     // It's going to be minted so we remove it from the ids
     // left to be minted
     idsLeft.removeAt(randomIndex);
     // Return the id at the random index
-    return idsLeft[randomIndex];
+    return tokenId;
   }
 
   /**
