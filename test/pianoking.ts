@@ -17,7 +17,8 @@ describe("PianoKing", function () {
   let deployer: SignerWithAddress;
   let buyer: SignerWithAddress;
   let pianoKingWallet: SignerWithAddress;
-  let initialLinkBalance = 20000;
+  const INITIAL_LINK_BALANCE = 20000;
+  const LINK_FEE = 2;
   // let walletBalance: BigNumber;
   beforeEach(async () => {
     // Get the local accounts
@@ -55,7 +56,7 @@ describe("PianoKing", function () {
       // Key hash for mainnet
       "0xAA77729D3466CA35AE8D28B3BBAC7CC36A5031EFDC430821C02BC31A238AF445",
       // 2 LINK fee on mainnet
-      2
+      LINK_FEE
     );
     await pianoKing.deployed();
 
@@ -64,14 +65,14 @@ describe("PianoKing", function () {
     // contract in order to pay the fees for randomness requests
     const transferTx = await linkToken.transfer(
       pianoKing.address,
-      initialLinkBalance
+      INITIAL_LINK_BALANCE
     );
     transferTx.wait(1);
   });
 
   it("Should not be able to deposit ETH", async function () {
     // No receive nor fallback function has been implemented so
-    // we should expect that any ETH not sent with the whiteListSender
+    // we should expect that any ETH not sent with the mint
     // function will not be accepted and the transaction reverted
     // That way the only way to deposit ETH on the smart contract is to
     // go through the mint function.
@@ -84,7 +85,11 @@ describe("PianoKing", function () {
   });
 
   it("Should mint a random NFT with 0.25 ETH", async function () {
-    // Initiate random request to mint an NFT
+    // The contract should have all the LINK received before
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE
+    );
+    // Initiate a randomness request to mint an NFT
     const tx = await pianoKing.connect(buyer).mint({
       value: ethers.utils.parseEther("0.25"),
     });
@@ -105,6 +110,10 @@ describe("PianoKing", function () {
       pianoKing.address
     );
     await vrfTx.wait(1);
+    // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE - LINK_FEE
+    );
     // From the zero address means it's a mint
     const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
     const [mintEvent] = await pianoKing.queryFilter(mintFilter);
@@ -166,11 +175,11 @@ describe("PianoKing", function () {
   it("Should fail to mint an NFT because not enough LINK for randomness request", async function () {
     // The smart contract should hold its previously given LINK balance
     expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
-      initialLinkBalance
+      INITIAL_LINK_BALANCE
     );
     // We deplete the smart contract from all its LINK tokens
     const withdrawLinkTx = await pianoKing.withdrawLinkTokens(
-      initialLinkBalance - 1
+      INITIAL_LINK_BALANCE - 1
     );
     withdrawLinkTx.wait(1);
 
@@ -188,6 +197,9 @@ describe("PianoKing", function () {
     // We give back our smart contract some LINKs
     const transferTx = await linkToken.transfer(pianoKing.address, 2);
     transferTx.wait(1);
+
+    // The contract should have 3 LINK now (1 + 2)
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(3);
 
     // And now the transaction should work just fine
     await expect(
