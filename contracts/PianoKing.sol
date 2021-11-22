@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./PianoKingWhitelist.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
-import "./lib/ArrayUtils.sol";
 
 /**
  * Some optimizations will be necessary before deploying to production.
@@ -20,7 +19,6 @@ contract PianoKing is
   Ownable,
   VRFConsumerBase
 {
-  using ArrayUtils for uint256[];
   // Default value of bool is false in Solidity (any unassigned variable will be
   // set to its zero state, e.g. 0 for uint256, Zero address for address),
   // so it's better not to assign it manually since this would consume more gas
@@ -30,21 +28,28 @@ contract PianoKing is
   uint256 private minPrice = 250000000000000000;
   // The max supply possible is 10,000 tokens
   uint16 private constant MAX_SUPPLY = 10000;
-  // Contains the ids of tokens left to mint
-  uint256[] private idsLeft;
+  // TO-DO: replace this url by the base url where the metadata
+  // of each token will be stored.
+  string private baseURI = "https://example.com/";
 
   PianoKingWhitelist private pianoKingWhitelist;
   address private pianoKingWallet;
 
   // Mapping the Randomness request id to the address
   // trying to mint a token
-  mapping(bytes32 => address) private requestIdToAddress;
+  mapping(bytes32 => address) public requestIdToAddress;
+  // Address => a boolean indicating if the given address
+  // as already initiated a randomness request
+  mapping(address => bool) public hasRequestedRandomness;
 
   // Data for chainlink
   bytes32 private keyhash;
   uint256 private fee;
 
-  event RequestedRandomness(bytes32 indexed requestId, address requester);
+  event RequestedRandomness(
+    bytes32 indexed requestId,
+    address indexed requester
+  );
   event LinkBalanceLow(uint256 amountLeft);
 
   constructor(
@@ -57,19 +62,6 @@ contract PianoKing is
     keyhash = _keyhash;
     fee = _fee;
     pianoKingWhitelist = PianoKingWhitelist(_pianoKingWhitelistAddress);
-    // Initialize the array of ids left to all the possible ids 1 to 10,000 (inclusive)
-    for (uint256 i = 1; i <= MAX_SUPPLY; i++) {
-      idsLeft.push(i);
-    }
-  }
-
-  function safeMint(
-    address to,
-    uint256 tokenId,
-    string memory uri
-  ) public onlyOwner {
-    _safeMint(to, tokenId);
-    _setTokenURI(tokenId, uri);
   }
 
   /**
@@ -77,6 +69,11 @@ contract PianoKing is
    * for the minimum price of a PianoKing after presale
    */
   function mint() external payable {
+    // A sender can trigger only one randomness request at a time
+    require(
+      !hasRequestedRandomness[msg.sender],
+      "A minting is alreay in progress"
+    );
     // There can only be 10,000 tokens minted
     require(totalSupply() < MAX_SUPPLY, "Max supply reached");
     // The sender must send at least the min price to mint
@@ -90,6 +87,7 @@ contract PianoKing is
     // Link the request id to the sender to retrieve it
     // later when the random number is received
     requestIdToAddress[requestId] = msg.sender;
+    hasRequestedRandomness[msg.sender] = true;
     emit RequestedRandomness(requestId, msg.sender);
     // If there's only enough LINK left for 10 or less oracle requests
     // we emit an event we can listen to remind us to
@@ -100,6 +98,11 @@ contract PianoKing is
   }
 
   function mintPreSaleTokens() external onlyOwner {
+    // Can trigger only one randomness request at a time
+    require(
+      !hasRequestedRandomness[address(this)],
+      "A minting is alreay in progress"
+    );
     // The distribution can only be done once for the presale
     require(!preSaleTokensDistributed, "Distributed already");
     // We need some LINK to pay a fee to the oracles
@@ -109,6 +112,7 @@ contract PianoKing is
     // Link the request id to the contract address indicating
     // that this request has been made with the mintPreSaleTokens
     requestIdToAddress[requestId] = address(this);
+    hasRequestedRandomness[address(this)] = true;
     emit RequestedRandomness(requestId, address(this));
   }
 
@@ -131,24 +135,32 @@ contract PianoKing is
       uint256 tokenId = generateTokenId(randomNumber);
       _safeMint(requester, tokenId);
     }
+    // Allow sender to trigger a new randomness request
+    delete hasRequestedRandomness[requester];
   }
 
+  // Not tested but this function will probably cost too much gas
+  // Therefore, it will need to be reorganized in smaller chuncks
+  // and the random number will need to be stored temporarly in the storage.
+  // Which we can do as it doesn't matter if people can access to this
+  // number (private keyword doesn't fully protected state variables)
+  // since it will only be used for this function
   function _mintPresaleTokens(uint256 randomNumber) private {
     address[] memory whiteListedAddresses = pianoKingWhitelist
       .getWhitelistedAddresses();
     for (uint256 i = 0; i < whiteListedAddresses.length; i++) {
       address whiteListedAddress = whiteListedAddresses[i];
-      uint256 allowance = pianoKingWhitelist.getWhitelistAllowance(
-        whiteListedAddress
+      // The allowance cannot be more than 25
+      uint8 allowance = uint8(
+        pianoKingWhitelist.getWhitelistAllowance(whiteListedAddress)
       );
-      for (uint256 j = 0; j < allowance; j++) {
+      for (uint8 j = 0; j < allowance; j++) {
         // Generate a number from the random number for the given
         // address and this given token to be minted
         uint256 localRandomNumber = uint256(
           keccak256(abi.encodePacked(whiteListedAddress, randomNumber, j))
         );
-        uint256 tokenId = generateTokenId(localRandomNumber);
-        _safeMint(whiteListedAddress, tokenId);
+        _safeMint(whiteListedAddress, generateTokenId(localRandomNumber));
       }
     }
     preSaleTokensDistributed = true;
@@ -158,18 +170,24 @@ contract PianoKing is
    * @dev Pick a random token id among the ones still available
    * @param randomNumber Random number which has previously provided by an oracle
    */
-  function generateTokenId(uint256 randomNumber) private returns (uint256) {
-    // Get a random index from the random number
-    // by constraining it to the modulo of the length
-    // of the array of remaining ids to be minted
-    uint256 randomIndex = randomNumber % idsLeft.length;
-    // Store the tokenId since we're removing it straight after
-    uint256 tokenId = idsLeft[randomIndex];
-    // It's going to be minted so we remove it from the ids
-    // left to be minted
-    idsLeft.removeAt(randomIndex);
-    // Return the id at the random index
-    return tokenId;
+  function generateTokenId(uint256 randomNumber)
+    private
+    view
+    returns (uint256)
+  {
+    // Needs to be more tested and optimized as the performance will get
+    // worse and worse as the supply left to mint decreases
+    uint16 randomId = uint16(randomNumber % MAX_SUPPLY);
+    for (uint16 id = randomId - 1; id <= randomId + MAX_SUPPLY; id++) {
+      uint16 moduloId = (id % MAX_SUPPLY) + 1;
+      if (_exists(moduloId)) {
+        continue;
+      } else {
+        return moduloId;
+      }
+    }
+    // Not a valid id
+    return 0;
   }
 
   /**
@@ -194,6 +212,18 @@ contract PianoKing is
   function setWhitelist(address addr) external onlyOwner {
     require(addr != address(0), "Invalid address");
     pianoKingWhitelist = PianoKingWhitelist(addr);
+  }
+
+  function setBaseURI(string memory uri) external onlyOwner {
+    baseURI = uri;
+  }
+
+  /**
+   * @dev Let the owner of the contract withdraw LINK from the smart contract.
+   * Can be useful if too much was sent or LINK are no longer need on the contract
+   */
+  function withdrawLinkTokens(uint256 amount) external onlyOwner {
+    LINK.transfer(msg.sender, amount);
   }
 
   // The following functions are overrides required by Solidity.
@@ -232,13 +262,8 @@ contract PianoKing is
 
   // View and pure functions
 
-  function _baseURI() internal pure override returns (string memory) {
-    // TO-DO: replace this url by the base url where the metadata
-    // of each token will be stored.
-    // It will be either a centralized server or on IPFS, TBD
-    // See OpenSea docs for the metadata standards:
-    // https://docs.opensea.io/docs/metadata-standards
-    return "https://example.com/";
+  function _baseURI() internal view override returns (string memory) {
+    return baseURI;
   }
 
   function getMinPrice() external view returns (uint256) {
