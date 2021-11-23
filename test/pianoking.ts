@@ -104,9 +104,10 @@ describe("PianoKing", function () {
     expect(requestRandomnessEvent.args.requester).to.be.equal(buyer.address);
     // Mock a response from Chainlink oracles with the number 42 as so-called
     // random number
+    const randomNumber = 42;
     const vrfTx = await vrfCoordinator.callBackWithRandomness(
       requestId,
-      42,
+      randomNumber,
       pianoKing.address
     );
     await vrfTx.wait(1);
@@ -119,8 +120,260 @@ describe("PianoKing", function () {
     const [mintEvent] = await pianoKing.queryFilter(mintFilter);
     const tokenId = mintEvent.args.tokenId;
     const to = mintEvent.args.to;
-    // The token should be the number 42 returned by the mock Chainlink VRF
-    expect(tokenId).to.be.equal(42);
+    // The token should be the number 43 since the Chainlink VRF returned 42
+    // that's used as an index
+    expect(tokenId).to.be.equal(randomNumber + 1);
+    // The sender of the original transaction should be the owner of minted token
+    expect(to).to.be.equal(buyer.address);
+  });
+
+  it("Should mint an NFT with different id for the same random number", async function () {
+    // The contract should have all the LINK received before
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE
+    );
+    // Initiate a randomness request to mint an NFT
+    const tx = await pianoKing.connect(buyer).mint({
+      value: ethers.utils.parseEther("0.25"),
+    });
+    tx.wait(1);
+    // We get the request id of the randomness request from the events
+    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+      requestRandomnessFilter
+    );
+    let requestId = requestRandomnessEvent.args.requestId;
+    // The requester should be the buyer
+    expect(requestRandomnessEvent.args.requester).to.be.equal(buyer.address);
+    // Mock a response from Chainlink oracles with the number 42 as so-called
+    // random number
+    const randomNumber = 42;
+    const vrfTx = await vrfCoordinator.callBackWithRandomness(
+      requestId,
+      randomNumber,
+      pianoKing.address
+    );
+    await vrfTx.wait(1);
+    // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE - LINK_FEE
+    );
+    // From the zero address means it's a mint
+    const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
+    const [mintEvent] = await pianoKing.queryFilter(mintFilter);
+    let tokenId = mintEvent.args.tokenId;
+    let to = mintEvent.args.to;
+    // The token should be the number 43 since the Chainlink VRF returned 42
+    // that's used as an index
+    expect(tokenId).to.be.equal(randomNumber + 1);
+    // The sender of the original transaction should be the owner of minted token
+    expect(to).to.be.equal(buyer.address);
+
+    // Initiate anoter randomness request to mint an NFT
+    const tx2 = await pianoKing.connect(buyer).mint({
+      value: ethers.utils.parseEther("0.25"),
+    });
+    tx2.wait(1);
+
+    // We get the request id of the randomness request from the events
+    const requestRandomnessEvents = await pianoKing.queryFilter(
+      requestRandomnessFilter
+    );
+    requestId = requestRandomnessEvents[1].args.requestId;
+    // The requester should be the buyer
+    expect(requestRandomnessEvent.args.requester).to.be.equal(buyer.address);
+    // Mock a response from Chainlink oracles with the number 42 as so-called
+    // random number
+    const vrfTx2 = await vrfCoordinator.callBackWithRandomness(
+      requestId,
+      randomNumber,
+      pianoKing.address
+    );
+    await vrfTx2.wait(1);
+    // The contract should have lost 2 more LINK consumed by Chainlink VRF as fee
+    // so 4 less in total
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE - LINK_FEE * 2
+    );
+
+    const mintEvents = await pianoKing.queryFilter(mintFilter);
+    tokenId = mintEvents[1].args.tokenId;
+    to = mintEvents[1].args.to;
+    // The token should not be the number 43 since it was already picked earlier
+    // It will get instead the last id that was moved into that slot, so 10,000
+    expect(tokenId).to.be.equal(10000);
+    // The sender of the original transaction should be the owner of minted token
+    expect(to).to.be.equal(buyer.address);
+  });
+
+  it("Should mint a random NFT with token id 50 when provided with random number 20049", async function () {
+    // The contract should have all the LINK received before
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE
+    );
+    // Initiate a randomness request to mint an NFT
+    const tx = await pianoKing.connect(buyer).mint({
+      value: ethers.utils.parseEther("0.25"),
+    });
+    tx.wait(1);
+    // We get the request id of the randomness request from the events
+    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+      requestRandomnessFilter
+    );
+    const requestId = requestRandomnessEvent.args.requestId;
+    // The requester should be the buyer
+    expect(requestRandomnessEvent.args.requester).to.be.equal(buyer.address);
+    // Mock a response from Chainlink oracles with the number 20049 as so-called
+    // random number
+    const randomNumber = 20049;
+    const vrfTx = await vrfCoordinator.callBackWithRandomness(
+      requestId,
+      randomNumber,
+      pianoKing.address
+    );
+    await vrfTx.wait(1);
+    // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE - LINK_FEE
+    );
+    // From the zero address means it's a mint
+    const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
+    const [mintEvent] = await pianoKing.queryFilter(mintFilter);
+    const tokenId = mintEvent.args.tokenId;
+    const to = mintEvent.args.to;
+    // The token should be the number 50 since the Chainlink VRF returned 20049
+    // which should be modulo 10000, so 49. Since the contract add plus one to
+    // as to start the ids at 1 and not 0, we'll get 50
+    expect(tokenId).to.be.equal(50);
+    // The sender of the original transaction should be the owner of minted token
+    expect(to).to.be.equal(buyer.address);
+  });
+
+  it("Should mint a random NFT with token id 1 when provided with random number 0", async function () {
+    // The contract should have all the LINK received before
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE
+    );
+    // Initiate a randomness request to mint an NFT
+    const tx = await pianoKing.connect(buyer).mint({
+      value: ethers.utils.parseEther("0.25"),
+    });
+    tx.wait(1);
+    // We get the request id of the randomness request from the events
+    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+      requestRandomnessFilter
+    );
+    const requestId = requestRandomnessEvent.args.requestId;
+    // The requester should be the buyer
+    expect(requestRandomnessEvent.args.requester).to.be.equal(buyer.address);
+    // Mock a response from Chainlink oracles with the number 20049 as so-called
+    // random number
+    const randomNumber = 0;
+    const vrfTx = await vrfCoordinator.callBackWithRandomness(
+      requestId,
+      randomNumber,
+      pianoKing.address
+    );
+    await vrfTx.wait(1);
+    // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE - LINK_FEE
+    );
+    // From the zero address means it's a mint
+    const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
+    const [mintEvent] = await pianoKing.queryFilter(mintFilter);
+    const tokenId = mintEvent.args.tokenId;
+    const to = mintEvent.args.to;
+    // The token should be the number 1 since the ids start at 1 and not 0
+    expect(tokenId).to.be.equal(1);
+    // The sender of the original transaction should be the owner of minted token
+    expect(to).to.be.equal(buyer.address);
+  });
+
+  it("Should mint a random NFT with token id 10000 when provided with random number 9999", async function () {
+    // The contract should have all the LINK received before
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE
+    );
+    // Initiate a randomness request to mint an NFT
+    const tx = await pianoKing.connect(buyer).mint({
+      value: ethers.utils.parseEther("0.25"),
+    });
+    tx.wait(1);
+    // We get the request id of the randomness request from the events
+    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+      requestRandomnessFilter
+    );
+    const requestId = requestRandomnessEvent.args.requestId;
+    // The requester should be the buyer
+    expect(requestRandomnessEvent.args.requester).to.be.equal(buyer.address);
+    // Mock a response from Chainlink oracles with the number 20049 as so-called
+    // random number
+    const randomNumber = 9999;
+    const vrfTx = await vrfCoordinator.callBackWithRandomness(
+      requestId,
+      randomNumber,
+      pianoKing.address
+    );
+    await vrfTx.wait(1);
+    // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE - LINK_FEE
+    );
+    // From the zero address means it's a mint
+    const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
+    const [mintEvent] = await pianoKing.queryFilter(mintFilter);
+    const tokenId = mintEvent.args.tokenId;
+    const to = mintEvent.args.to;
+    // The token should be the number 10000 since 9999 is actually the last index
+    // in the range
+    expect(tokenId).to.be.equal(10000);
+    // The sender of the original transaction should be the owner of minted token
+    expect(to).to.be.equal(buyer.address);
+  });
+
+  it("Should mint a random NFT with token id 1 when provided with random number 10000", async function () {
+    // The contract should have all the LINK received before
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE
+    );
+    // Initiate a randomness request to mint an NFT
+    const tx = await pianoKing.connect(buyer).mint({
+      value: ethers.utils.parseEther("0.25"),
+    });
+    tx.wait(1);
+    // We get the request id of the randomness request from the events
+    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+      requestRandomnessFilter
+    );
+    const requestId = requestRandomnessEvent.args.requestId;
+    // The requester should be the buyer
+    expect(requestRandomnessEvent.args.requester).to.be.equal(buyer.address);
+    // Mock a response from Chainlink oracles with the number 20049 as so-called
+    // random number
+    const randomNumber = 10000;
+    const vrfTx = await vrfCoordinator.callBackWithRandomness(
+      requestId,
+      randomNumber,
+      pianoKing.address
+    );
+    await vrfTx.wait(1);
+    // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE - LINK_FEE
+    );
+    // From the zero address means it's a mint
+    const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
+    const [mintEvent] = await pianoKing.queryFilter(mintFilter);
+    const tokenId = mintEvent.args.tokenId;
+    const to = mintEvent.args.to;
+    // The token should be the number 1 since 10000 modulo 10000 is 0
+    // and we add 1 to it to start ids at 1
+    expect(tokenId).to.be.equal(1);
     // The sender of the original transaction should be the owner of minted token
     expect(to).to.be.equal(buyer.address);
   });

@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./PianoKingWhitelist.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
+import "./lib/ArrayUtils.sol";
 
 /**
  * Some optimizations will be necessary before deploying to production.
@@ -19,6 +21,7 @@ contract PianoKing is
   Ownable,
   VRFConsumerBase
 {
+  using ArrayUtils for uint16[];
   // Default value of bool is false in Solidity (any unassigned variable will be
   // set to its zero state, e.g. 0 for uint256, Zero address for address),
   // so it's better not to assign it manually since this would consume more gas
@@ -31,6 +34,9 @@ contract PianoKing is
   // TO-DO: replace this url by the base url where the metadata
   // of each token will be stored.
   string private baseURI = "https://example.com/";
+  // Mapping letting us avoid collisions while choosing a random token id
+  // in a very cost effective way
+  mapping(uint16 => uint16) private movedIds;
 
   PianoKingWhitelist private pianoKingWhitelist;
   address private pianoKingWallet;
@@ -170,24 +176,32 @@ contract PianoKing is
    * @dev Pick a random token id among the ones still available
    * @param randomNumber Random number which has previously provided by an oracle
    */
-  function generateTokenId(uint256 randomNumber)
-    private
-    view
-    returns (uint256)
-  {
-    // Needs to be more tested and optimized as the performance will get
-    // worse and worse as the supply left to mint decreases
-    uint16 randomId = uint16(randomNumber % MAX_SUPPLY);
-    for (uint16 id = randomId - 1; id <= randomId + MAX_SUPPLY; id++) {
-      uint16 moduloId = (id % MAX_SUPPLY) + 1;
-      if (_exists(moduloId)) {
-        continue;
-      } else {
-        return moduloId;
-      }
+  function generateTokenId(uint256 randomNumber) private returns (uint256) {
+    // We get the number of ids remaining by substracting the total supply
+    // with the max supply
+    uint16 idsRemaining = uint16(MAX_SUPPLY - totalSupply());
+    // Keep the randomIndex within the 0 => 10,000 range
+    uint16 randomIndex = uint16(randomNumber % idsRemaining);
+    // Pick the id at randomIndex within the ids remanining
+    uint256 tokenId = getIdAt(randomIndex);
+
+    // Move the last id in the remaining ids into position randomIndex
+    // That way if we get that randomIndex again it will return that number
+    movedIds[randomIndex] = getIdAt(idsRemaining - 1);
+    // Free the storage used at the last index if used
+    delete movedIds[idsRemaining - 1];
+
+    return tokenId;
+  }
+
+  function getIdAt(uint16 i) private view returns (uint16) {
+    // Return the number stored at index i if it has been defined
+    if (movedIds[i] != 0) {
+      return movedIds[i];
+    } else {
+      // Otherwise just return the i + 1 (as it starts at 1)
+      return i + 1;
     }
-    // Not a valid id
-    return 0;
   }
 
   /**
@@ -233,6 +247,8 @@ contract PianoKing is
     address to,
     uint256 tokenId
   ) internal override(ERC721, ERC721Enumerable) {
+    // We prevent to burn token once they have minted
+    require(to != address(0), "Burning not allowed");
     super._beforeTokenTransfer(from, to, tokenId);
   }
 
