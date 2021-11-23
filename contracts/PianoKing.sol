@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./PianoKingWhitelist.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
-import "./lib/ArrayUtils.sol";
 
 /**
  * Some optimizations will be necessary before deploying to production.
@@ -21,12 +20,6 @@ contract PianoKing is
   Ownable,
   VRFConsumerBase
 {
-  using ArrayUtils for uint16[];
-  // Default value of bool is false in Solidity (any unassigned variable will be
-  // set to its zero state, e.g. 0 for uint256, Zero address for address),
-  // so it's better not to assign it manually since this would consume more gas
-  // Indicate whether the presale tokens have distributed
-  bool private preSaleTokensDistributed;
   // The amount in Wei (0.25 ETH by default) required to give this contract to mint an NFT
   uint256 private minPrice = 250000000000000000;
   // The max supply possible is 10,000 tokens
@@ -37,6 +30,13 @@ contract PianoKing is
   // Mapping letting us avoid collisions while choosing a random token id
   // in a very cost effective way
   mapping(uint16 => uint16) private movedIds;
+
+  // Address whitelisted by the whitelist contract => boolean indicating
+  // if the tokens pre-purchased during presale have been minted already or not
+  mapping(address => bool) private whiteListedAddressToMinted;
+
+  // The random number used for presale mints
+  uint256 private randomNumberForPresaleMint;
 
   PianoKingWhitelist private pianoKingWhitelist;
   address private pianoKingWallet;
@@ -71,8 +71,8 @@ contract PianoKing is
   }
 
   /**
-   * TO-DO: function letting anyone mint an NFT
-   * for the minimum price of a PianoKing after presale
+   * @dev Let anyone mint a random NFT as long as they send at least
+   * the min price required to do so
    */
   function mint() external payable {
     // A sender can trigger only one randomness request at a time
@@ -103,14 +103,15 @@ contract PianoKing is
     }
   }
 
-  function mintPreSaleTokens() external onlyOwner {
+  /**
+   * @dev Request the random number to be use for presale minting
+   */
+  function requestPresaleRN() external onlyOwner {
     // Can trigger only one randomness request at a time
     require(
       !hasRequestedRandomness[address(this)],
       "A minting is alreay in progress"
     );
-    // The distribution can only be done once for the presale
-    require(!preSaleTokensDistributed, "Distributed already");
     // We need some LINK to pay a fee to the oracles
     require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK");
     // Request a random number to Chainlink oracles
@@ -133,9 +134,9 @@ contract PianoKing is
     override
   {
     address requester = requestIdToAddress[requestId];
-    // Request made by the contract so coming from the mintPreSaleTokens function
+    // Request made by the contract so coming from the requestPresaleRN function
     if (requester == address(this)) {
-      _mintPresaleTokens(randomNumber);
+      randomNumberForPresaleMint = randomNumber;
     } else {
       // Request made by a random sender
       uint256 tokenId = generateTokenId(randomNumber);
@@ -145,31 +146,25 @@ contract PianoKing is
     delete hasRequestedRandomness[requester];
   }
 
-  // Not tested but this function will probably cost too much gas
-  // Therefore, it will need to be reorganized in smaller chuncks
-  // and the random number will need to be stored temporarly in the storage.
-  // Which we can do as it doesn't matter if people can access to this
-  // number (private keyword doesn't fully protected state variables)
-  // since it will only be used for this function
-  function _mintPresaleTokens(uint256 randomNumber) private {
-    address[] memory whiteListedAddresses = pianoKingWhitelist
-      .getWhitelistedAddresses();
-    for (uint256 i = 0; i < whiteListedAddresses.length; i++) {
-      address whiteListedAddress = whiteListedAddresses[i];
-      // The allowance cannot be more than 25
-      uint8 allowance = uint8(
-        pianoKingWhitelist.getWhitelistAllowance(whiteListedAddress)
+  /**
+   * @dev Mint tokens pre-purchased during presale for a given address
+   */
+  function mintPreSaleTokensForAddress(address addr) external onlyOwner {
+    require(addr != address(0), "Invalid address");
+    require(!whiteListedAddressToMinted[addr], "Already minted");
+    // The allowance cannot be more than 25 so uint8 will be enough
+    uint8 allowance = uint8(pianoKingWhitelist.getWhitelistAllowance(addr));
+    require(allowance > 0, "Not whitelisted");
+    for (uint8 j = 0; j < allowance; j++) {
+      // Generate a number from the random number for the given
+      // address and this given token to be minted
+      uint256 randomNumber = uint256(
+        keccak256(abi.encodePacked(randomNumberForPresaleMint, addr, j))
       );
-      for (uint8 j = 0; j < allowance; j++) {
-        // Generate a number from the random number for the given
-        // address and this given token to be minted
-        uint256 localRandomNumber = uint256(
-          keccak256(abi.encodePacked(whiteListedAddress, randomNumber, j))
-        );
-        _safeMint(whiteListedAddress, generateTokenId(localRandomNumber));
-      }
+      _safeMint(addr, generateTokenId(randomNumber));
     }
-    preSaleTokensDistributed = true;
+    // Indicate that this address has now received its pre-purchased NFTs
+    whiteListedAddressToMinted[addr] = true;
   }
 
   /**
@@ -182,7 +177,7 @@ contract PianoKing is
     uint16 idsRemaining = uint16(MAX_SUPPLY - totalSupply());
     // Keep the randomIndex within the 0 => 10,000 range
     uint16 randomIndex = uint16(randomNumber % idsRemaining);
-    // Pick the id at randomIndex within the ids remanining
+    // Pick the id at randomIndex within the ids remaining
     uint256 tokenId = getIdAt(randomIndex);
 
     // Move the last id in the remaining ids into position randomIndex
