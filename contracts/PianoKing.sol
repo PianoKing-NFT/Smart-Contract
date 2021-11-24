@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
@@ -34,6 +33,9 @@ contract PianoKing is
   // Address whitelisted by the whitelist contract => boolean indicating
   // if the tokens pre-purchased during presale have been minted already or not
   mapping(address => bool) private whiteListedAddressToMinted;
+
+  // Address => whether this address is allowed to mint an NFT for free (excluding gas fee)
+  mapping(address => bool) private giveAwayAddress;
 
   // The random number used for presale mints
   uint256 private randomNumberForPresaleMint;
@@ -84,7 +86,11 @@ contract PianoKing is
     require(totalSupply() < MAX_SUPPLY, "Max supply reached");
     // The sender must send at least the min price to mint
     // and acquire the NFT
-    require(msg.value >= minPrice, "Not enough funds");
+    // Or is allowed to do it for free
+    require(
+      msg.value >= minPrice || giveAwayAddress[msg.sender],
+      "Not enough funds"
+    );
     uint256 linkBalance = LINK.balanceOf(address(this));
     // We need some LINK to pay a fee to the oracles
     require(linkBalance >= fee, "Not enough LINK");
@@ -225,6 +231,15 @@ contract PianoKing is
 
   function setBaseURI(string memory uri) external onlyOwner {
     baseURI = uri;
+  }
+
+  /**
+   * @dev Add addresses that can mint an NFT without paying
+   */
+  function addGiveAwayAddresses(address[] memory addrs) external onlyOwner {
+    for (uint256 i = 0; i < addrs.length; i++) {
+      giveAwayAddress[addrs[i]] = true;
+    }
   }
 
   /**
