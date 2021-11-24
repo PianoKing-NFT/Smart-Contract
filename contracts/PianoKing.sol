@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./PianoKingWhitelist.sol";
-import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
+import "./PianoKingRandomnessOracle.sol";
 
 /**
  * Some optimizations will be necessary before deploying to production.
@@ -18,7 +18,7 @@ contract PianoKing is
   ERC721Enumerable,
   ERC721URIStorage,
   Ownable,
-  VRFConsumerBase
+  PianoKingRandomnessConsumer
 {
   // The amount in Wei (0.25 ETH by default) required to give this contract to mint an NFT
   uint256 private minPrice = 250000000000000000;
@@ -39,35 +39,26 @@ contract PianoKing is
   uint256 private randomNumberForPresaleMint;
 
   PianoKingWhitelist private pianoKingWhitelist;
+  PianoKingRandomnessOracle private pianoKingOracle;
   address private pianoKingWallet;
 
   // Mapping the Randomness request id to the address
   // trying to mint a token
-  mapping(bytes32 => address) public requestIdToAddress;
+  mapping(uint256 => address) public requestIdToAddress;
   // Address => a boolean indicating if the given address
   // as already initiated a randomness request
   mapping(address => bool) public hasRequestedRandomness;
 
-  // Data for chainlink
-  bytes32 private keyhash;
-  uint256 private fee;
-
   event RequestedRandomness(
-    bytes32 indexed requestId,
+    uint256 indexed requestId,
     address indexed requester
   );
-  event LinkBalanceLow(uint256 amountLeft);
 
-  constructor(
-    address _pianoKingWhitelistAddress,
-    address _vrfCoordinator,
-    address _linkToken,
-    bytes32 _keyhash,
-    uint256 _fee
-  ) VRFConsumerBase(_vrfCoordinator, _linkToken) ERC721("PianoKing", "PK") {
-    keyhash = _keyhash;
-    fee = _fee;
+  constructor(address _pianoKingWhitelistAddress, address _pianoKingOracle)
+    ERC721("PianoKing", "PK")
+  {
     pianoKingWhitelist = PianoKingWhitelist(_pianoKingWhitelistAddress);
+    pianoKingOracle = PianoKingRandomnessOracle(_pianoKingOracle);
   }
 
   /**
@@ -85,22 +76,13 @@ contract PianoKing is
     // The sender must send at least the min price to mint
     // and acquire the NFT
     require(msg.value >= minPrice, "Not enough funds");
-    uint256 linkBalance = LINK.balanceOf(address(this));
-    // We need some LINK to pay a fee to the oracles
-    require(linkBalance >= fee, "Not enough LINK");
     // Request a random number to Chainlink oracles
-    bytes32 requestId = requestRandomness(keyhash, fee);
+    uint256 requestId = requestRandomness();
     // Link the request id to the sender to retrieve it
     // later when the random number is received
     requestIdToAddress[requestId] = msg.sender;
     hasRequestedRandomness[msg.sender] = true;
     emit RequestedRandomness(requestId, msg.sender);
-    // If there's only enough LINK left for 10 or less oracle requests
-    // we emit an event we can listen to remind us to
-    // replenish the contract with LINK tokens
-    if (linkBalance <= fee * 10) {
-      emit LinkBalanceLow(linkBalance);
-    }
   }
 
   /**
@@ -112,10 +94,8 @@ contract PianoKing is
       !hasRequestedRandomness[address(this)],
       "A minting is alreay in progress"
     );
-    // We need some LINK to pay a fee to the oracles
-    require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK");
     // Request a random number to Chainlink oracles
-    bytes32 requestId = requestRandomness(keyhash, fee);
+    uint256 requestId = requestRandomness();
     // Link the request id to the contract address indicating
     // that this request has been made with the mintPreSaleTokens
     requestIdToAddress[requestId] = address(this);
@@ -129,7 +109,7 @@ contract PianoKing is
    * This function cannot use more than 200,000 gas or the transaction
    * will fail
    */
-  function fulfillRandomness(bytes32 requestId, uint256 randomNumber)
+  function fulfillRandomness(uint256 requestId, uint256 randomNumber)
     internal
     override
   {
@@ -200,6 +180,13 @@ contract PianoKing is
   }
 
   /**
+   * @dev Initiate a randomness request
+   */
+  function requestRandomness() private returns (uint256) {
+    return pianoKingOracle.requestRandomNumber();
+  }
+
+  /**
    * @dev Set the address of the Piano King Wallet
    */
   function setPianoKingWallet(address addr) external onlyOwner {
@@ -225,14 +212,6 @@ contract PianoKing is
 
   function setBaseURI(string memory uri) external onlyOwner {
     baseURI = uri;
-  }
-
-  /**
-   * @dev Let the owner of the contract withdraw LINK from the smart contract.
-   * Can be useful if too much was sent or LINK are no longer need on the contract
-   */
-  function withdrawLinkTokens(uint256 amount) external onlyOwner {
-    LINK.transfer(msg.sender, amount);
   }
 
   // The following functions are overrides required by Solidity.
