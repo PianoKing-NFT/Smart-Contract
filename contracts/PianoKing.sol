@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "hardhat/console.sol";
+import "./lib/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./PianoKingWhitelist.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
@@ -12,23 +11,19 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
  * Some optimizations will be necessary before deploying to production.
  * For now it's just a draft
  */
-contract PianoKing is
-  ERC721,
-  ERC721Enumerable,
-  ERC721URIStorage,
-  Ownable,
-  VRFConsumerBase
-{
+contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   // The amount in Wei (0.25 ETH by default) required to give this contract to mint an NFT
   uint256 private minPrice = 250000000000000000;
   // The max supply possible is 10,000 tokens
-  uint16 private constant MAX_SUPPLY = 10000;
+  uint256 private constant MAX_SUPPLY = 10000;
+  // The current minted supply
+  uint256 public totalSupply;
   // TO-DO: replace this url by the base url where the metadata
   // of each token will be stored.
   string private baseURI = "https://example.com/";
   // Mapping letting us avoid collisions while choosing a random token id
   // in a very cost effective way
-  mapping(uint16 => uint16) private movedIds;
+  mapping(uint256 => uint256) private movedIds;
 
   // Address whitelisted by the whitelist contract => boolean indicating
   // if the tokens pre-purchased during presale have been minted already or not
@@ -59,6 +54,7 @@ contract PianoKing is
     address indexed requester
   );
   event LinkBalanceLow(uint256 amountLeft);
+  event RandomNumberReceived(address indexed requester);
 
   constructor(
     address _pianoKingWhitelistAddress,
@@ -83,7 +79,7 @@ contract PianoKing is
       "A minting is alreay in progress"
     );
     // There can only be 10,000 tokens minted
-    require(totalSupply() < MAX_SUPPLY, "Max supply reached");
+    require(totalSupply < MAX_SUPPLY, "Max supply reached");
     // The sender must send at least the min price to mint
     // and acquire the NFT
     // Or is allowed to do it for free
@@ -148,29 +144,37 @@ contract PianoKing is
       uint256 tokenId = generateTokenId(randomNumber);
       _safeMint(requester, tokenId);
     }
+    emit RandomNumberReceived(requester);
     // Allow sender to trigger a new randomness request
     delete hasRequestedRandomness[requester];
   }
 
   /**
-   * @dev Mint tokens pre-purchased during presale for a given address
+   * @dev Mint all the token pre-purchased during the presale
+   * We don't use neither the _mint nor the _safeMint function
+   * to optimize the process as much as possible in terms of fee
    */
-  function mintPreSaleTokensForAddress(address addr) external onlyOwner {
-    require(addr != address(0), "Invalid address");
-    require(!whiteListedAddressToMinted[addr], "Already minted");
-    // The allowance cannot be more than 25 so uint8 will be enough
-    uint8 allowance = uint8(pianoKingWhitelist.getWhitelistAllowance(addr));
-    require(allowance > 0, "Not whitelisted");
-    for (uint8 j = 0; j < allowance; j++) {
-      // Generate a number from the random number for the given
-      // address and this given token to be minted
-      uint256 randomNumber = uint256(
-        keccak256(abi.encodePacked(randomNumberForPresaleMint, addr, j))
-      );
-      _safeMint(addr, generateTokenId(randomNumber));
+  function presaleMint() external onlyOwner {
+    address[] memory addrs = pianoKingWhitelist.getWhitelistedAddresses();
+    uint256 seedRN = randomNumberForPresaleMint;
+    for (uint256 i = 0; i < addrs.length; i++) {
+      address addr = addrs[i];
+      uint256 allowance = pianoKingWhitelist.getWhitelistAllowance(addr);
+      for (uint256 j = 0; j < allowance; j++) {
+        // Generate a number from the random number for the given
+        // address and this given token to be minted
+        // XOR is cheaper than keccak256 and is enough for the purpose of expanding
+        // the random number.
+        uint256 tokenId = generateTokenId(seedRN ^ gasleft());
+        _owners[tokenId] = addr;
+        emit Transfer(address(0), addr, tokenId);
+        totalSupply += 1;
+      }
+      // Update the balance of the address
+      _balances[addr] += allowance;
+      // Indicate that this address has now received its pre-purchased NFTs
+      whiteListedAddressToMinted[addr] = true;
     }
-    // Indicate that this address has now received its pre-purchased NFTs
-    whiteListedAddressToMinted[addr] = true;
   }
 
   /**
@@ -180,22 +184,23 @@ contract PianoKing is
   function generateTokenId(uint256 randomNumber) private returns (uint256) {
     // We get the number of ids remaining by substracting the total supply
     // with the max supply
-    uint16 idsRemaining = uint16(MAX_SUPPLY - totalSupply());
+    uint256 idsRemaining = MAX_SUPPLY - totalSupply;
     // Keep the randomIndex within the 0 => 10,000 range
-    uint16 randomIndex = uint16(randomNumber % idsRemaining);
+    uint256 randomIndex = randomNumber % idsRemaining;
     // Pick the id at randomIndex within the ids remaining
     uint256 tokenId = getIdAt(randomIndex);
 
     // Move the last id in the remaining ids into position randomIndex
     // That way if we get that randomIndex again it will return that number
-    movedIds[randomIndex] = getIdAt(idsRemaining - 1);
+    idsRemaining--;
+    movedIds[randomIndex] = getIdAt(idsRemaining);
     // Free the storage used at the last index if used
-    delete movedIds[idsRemaining - 1];
+    delete movedIds[idsRemaining];
 
     return tokenId;
   }
 
-  function getIdAt(uint16 i) private view returns (uint16) {
+  function getIdAt(uint256 i) private view returns (uint256) {
     // Return the number stored at index i if it has been defined
     if (movedIds[i] != 0) {
       return movedIds[i];
@@ -236,7 +241,7 @@ contract PianoKing is
   /**
    * @dev Add addresses that can mint an NFT without paying
    */
-  function addGiveAwayAddresses(address[] memory addrs) external onlyOwner {
+  function addGiveAwayAddresses(address[] calldata addrs) external onlyOwner {
     for (uint256 i = 0; i < addrs.length; i++) {
       giveAwayAddress[addrs[i]] = true;
     }
@@ -256,34 +261,26 @@ contract PianoKing is
     address from,
     address to,
     uint256 tokenId
-  ) internal override(ERC721, ERC721Enumerable) {
+  ) internal override {
     // We prevent to burn token once they have minted
     require(to != address(0), "Burning not allowed");
+    if (from == address(0)) {
+      // If it's from the zero address then it's a mint so we increase the supply
+      totalSupply += 1;
+    }
     super._beforeTokenTransfer(from, to, tokenId);
-  }
-
-  // A PianoKing NFT will not be burnable, so this function won't be exposed
-  // publically at any point
-  function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-    super._burn(tokenId);
   }
 
   function tokenURI(uint256 tokenId)
     public
     view
-    override(ERC721, ERC721URIStorage)
+    override
     returns (string memory)
   {
-    return super.tokenURI(tokenId);
-  }
-
-  function supportsInterface(bytes4 interfaceId)
-    public
-    view
-    override(ERC721, ERC721Enumerable)
-    returns (bool)
-  {
-    return super.supportsInterface(interfaceId);
+    require(_exists(tokenId), "URI query for nonexistent token");
+    // Concatenate the baseURI and the tokenId as the tokenId should
+    // just be appended at the end to access the token metadata
+    return string(abi.encodePacked(_baseURI(), tokenId));
   }
 
   // View and pure functions

@@ -462,17 +462,17 @@ describe("PianoKing", function () {
     ).to.be.not.reverted;
   });
 
-  it("Should mint and distribute the tokens bought during the presale by a given address", async function () {
-    const whiteLisTx = await whiteList.connect(buyer).whiteListSender({
-      value: ethers.utils.parseEther("0.2"),
-    });
-    whiteLisTx.wait(1);
+  it("Should mint and distribute the tokens bought during the presale", async function () {
+    const accounts = await ethers.getSigners();
+    for (let i = 10; i < 20; i++) {
+      const whiteLisTx = await whiteList.connect(accounts[i]).whiteListSender({
+        value: ethers.utils.parseEther("2.5"),
+      });
+      whiteLisTx.wait(1);
+    }
 
     const randomnessTx = await pianoKing.requestPresaleRN();
     randomnessTx.wait(1);
-
-    const tx = await pianoKing.mintPreSaleTokensForAddress(buyer.address);
-    tx.wait(1);
 
     // We get the request id of the randomness request from the events
     const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
@@ -497,14 +497,21 @@ describe("PianoKing", function () {
     expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
       INITIAL_LINK_BALANCE - LINK_FEE
     );
+
+    const tx = await pianoKing.presaleMint();
+    tx.wait(1);
+
     // From the zero address means it's a mint
     const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
     const mintEvents = await pianoKing.queryFilter(mintFilter);
-    expect(mintEvents.length).to.be.equal(2);
-    expect(mintEvents[0].args.to).to.be.equal(buyer.address);
-    expect(mintEvents[1].args.to).to.be.equal(buyer.address);
+    expect(mintEvents.length).to.be.equal(250);
+    expect(mintEvents[0].args.to).to.be.equal(accounts[10].address);
+    expect(mintEvents[1].args.to).to.be.equal(accounts[10].address);
+    expect(mintEvents[25].args.to).to.be.equal(accounts[11].address);
+    expect(mintEvents[26].args.to).to.be.equal(accounts[11].address);
     expect(mintEvents[0].args.tokenId).to.be.not.equal(
       mintEvents[1].args.tokenId
     );
+    // console.log(mintEvents.map((x) => x.args.tokenId.toNumber()));
   });
 });
