@@ -6,12 +6,14 @@ import "./lib/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./PianoKingWhitelist.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * Some optimizations will be necessary before deploying to production.
  * For now it's just a draft
  */
 contract PianoKing is ERC721, Ownable, VRFConsumerBase {
+  using Address for address payable;
   // The amount in Wei (0.25 ETH by default) required to give this contract to mint an NFT
   uint256 private minPrice = 250000000000000000;
   // The max supply possible is 10,000 tokens
@@ -29,14 +31,15 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   // if the tokens pre-purchased during presale have been minted already or not
   mapping(address => bool) private whiteListedAddressToMinted;
 
-  // Address => whether this address is allowed to mint an NFT for free (excluding gas fee)
-  mapping(address => bool) private giveAwayAddress;
+  // Address => how many free tokens this address can mint
+  mapping(address => uint256) private preApprovedAddress;
 
   // The random number used for presale mints
   uint256 private randomNumberForPresaleMint;
 
   PianoKingWhitelist private pianoKingWhitelist;
-  address private pianoKingWallet;
+  // Address authorized to withdraw the funds
+  address public pianoKingWallet = 0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586;
 
   // Mapping the Randomness request id to the address
   // trying to mint a token
@@ -68,23 +71,24 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     pianoKingWhitelist = PianoKingWhitelist(_pianoKingWhitelistAddress);
   }
 
+  function mint() external payable {
+    mintFor(msg.sender);
+  }
+
   /**
    * @dev Let anyone mint a random NFT as long as they send at least
    * the min price required to do so
    */
-  function mint() external payable {
+  function mintFor(address addr) public payable {
     // A sender can trigger only one randomness request at a time
-    require(
-      !hasRequestedRandomness[msg.sender],
-      "A minting is alreay in progress"
-    );
+    require(!hasRequestedRandomness[addr], "A minting is alreay in progress");
     // There can only be 10,000 tokens minted
     require(totalSupply < MAX_SUPPLY, "Max supply reached");
     // The sender must send at least the min price to mint
     // and acquire the NFT
     // Or is allowed to do it for free
     require(
-      msg.value >= minPrice || giveAwayAddress[msg.sender],
+      msg.value >= minPrice || preApprovedAddress[addr] > 0,
       "Not enough funds"
     );
     uint256 linkBalance = LINK.balanceOf(address(this));
@@ -94,9 +98,9 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     bytes32 requestId = requestRandomness(keyhash, fee);
     // Link the request id to the sender to retrieve it
     // later when the random number is received
-    requestIdToAddress[requestId] = msg.sender;
-    hasRequestedRandomness[msg.sender] = true;
-    emit RequestedRandomness(requestId, msg.sender);
+    requestIdToAddress[requestId] = addr;
+    hasRequestedRandomness[addr] = true;
+    emit RequestedRandomness(requestId, addr);
     // If there's only enough LINK left for 10 or less oracle requests
     // we emit an event we can listen to remind us to
     // replenish the contract with LINK tokens
@@ -241,9 +245,12 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   /**
    * @dev Add addresses that can mint an NFT without paying
    */
-  function addGiveAwayAddresses(address[] calldata addrs) external onlyOwner {
+  function addGiveAwayAddresses(
+    address[] calldata addrs,
+    uint256[] calldata amounts
+  ) external onlyOwner {
     for (uint256 i = 0; i < addrs.length; i++) {
-      giveAwayAddress[addrs[i]] = true;
+      preApprovedAddress[addrs[i]] = amounts[i];
     }
   }
 
@@ -253,6 +260,18 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
    */
   function withdrawLinkTokens(uint256 amount) external onlyOwner {
     LINK.transfer(msg.sender, amount);
+  }
+
+  /**
+   * @dev Retrieve the funds of the sale
+   */
+  function retrieveFunds() external {
+    // Only the Piano King Wallet or the owner can withraw the funds
+    require(
+      msg.sender == pianoKingWallet || msg.sender == owner(),
+      "Not allowed"
+    );
+    payable(pianoKingWallet).sendValue(address(this).balance);
   }
 
   // The following functions are overrides required by Solidity.
