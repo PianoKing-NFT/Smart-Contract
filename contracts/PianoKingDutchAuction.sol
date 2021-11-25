@@ -57,6 +57,8 @@ contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
       block.timestamp >= auctions[counter].expiresAt,
       "Auction already in progress"
     );
+    // The Dutch Auction can only happen after the first 5000 tokens have been minted
+    require(pianoKing.totalSupply() >= 5000, "Auction phase not started");
     Auction storage auction = auctions[counter++];
     // The auction start right at this block timestamp
     auction.startAt = block.timestamp;

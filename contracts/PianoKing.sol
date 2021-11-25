@@ -22,14 +22,10 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   uint256 public totalSupply;
   // TO-DO: replace this url by the base url where the metadata
   // of each token will be stored.
-  string private baseURI = "https://example.com/";
+  string internal baseURI = "https://example.com/";
   // Mapping letting us avoid collisions while choosing a random token id
   // in a very cost effective way
   mapping(uint256 => uint256) private movedIds;
-
-  // Address whitelisted by the whitelist contract => boolean indicating
-  // if the tokens pre-purchased during presale have been minted already or not
-  // mapping(address => bool) private whiteListedAddressToMinted;
 
   // Address => how many free tokens this address can mint
   mapping(address => uint256) private preApprovedAddress;
@@ -229,8 +225,10 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
    * heroic
    * The second phase is the next 5000 divided each in 500 distributed in
    * Dutch auctions. Each slot of 500 contains 2 legendary and 15 heroic.
-   * If a someone which to verify these data, he or she can do so by consulting
+   * If someone whish to verify these data, he or she can do so by consulting
    * the metadata of the tokens yet to be minted
+   * @param lowerBound The starting position from which the tokenId will be randomly picked
+   * @param upperBound The ending position until which the tokenId will be randomly picked
    */
   function getBounds()
     private
