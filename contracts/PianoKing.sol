@@ -37,6 +37,10 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   // Address authorized to withdraw the funds
   address public pianoKingWallet = 0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586;
 
+  // Doesn't have to be defined straight away, can be defined later
+  // at least before phase 2
+  address public pianoKingDutchAuction;
+
   // Mapping the Randomness request id to the address
   // trying to mint a token
   mapping(bytes32 => address) public requestIdToAddress;
@@ -68,6 +72,15 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   }
 
   function mint() external payable {
+    // The sender must send at least the min price to mint
+    // and acquire the NFT
+    // Or is allowed to do it for free
+    // The restriction is here as it doesn't apply for Piano King Dutch Auction
+    // which uses the mintFor function directly
+    require(
+      msg.value >= minPrice || preApprovedAddress[msg.sender] > 0,
+      "Not enough funds"
+    );
     mintFor(msg.sender);
   }
 
@@ -80,13 +93,13 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     require(!hasRequestedRandomness[addr], "A minting is alreay in progress");
     // There can only be 10,000 tokens minted
     require(totalSupply < MAX_SUPPLY, "Max supply reached");
-    // The sender must send at least the min price to mint
-    // and acquire the NFT
-    // Or is allowed to do it for free
-    require(
-      msg.value >= minPrice || preApprovedAddress[addr] > 0,
-      "Not enough funds"
-    );
+
+    // After the first phase only the Piano King Dutch Auction contract
+    // can mint
+    if (totalSupply >= 5000) {
+      require(msg.sender == pianoKingDutchAuction, "Only through auction");
+    }
+
     uint256 linkBalance = LINK.balanceOf(address(this));
     // We need some LINK to pay a fee to the oracles
     require(linkBalance >= fee, "Not enough LINK");
@@ -268,6 +281,11 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   function setWhitelist(address addr) external onlyOwner {
     require(addr != address(0), "Invalid address");
     pianoKingWhitelist = PianoKingWhitelist(addr);
+  }
+
+  function setDutchAuction(address addr) external onlyOwner {
+    require(addr != address(0), "Invalid address");
+    pianoKingDutchAuction = addr;
   }
 
   function setBaseURI(string memory uri) external onlyOwner {

@@ -78,7 +78,8 @@ describe("Dutch Auction", function () {
     );
     await pianoKing.deployed();
 
-    await pianoKing.setTotalSupply(5000);
+    const totalSupplyTx = await pianoKing.setTotalSupply(5000);
+    await totalSupplyTx.wait(1);
 
     const DutchAuction = await ethers.getContractFactory(
       "PianoKingDutchAuction"
@@ -86,6 +87,11 @@ describe("Dutch Auction", function () {
     dutchAuction = await DutchAuction.deploy(pianoKing.address);
 
     await dutchAuction.deployed();
+
+    const setAuctionAddrTx = await pianoKing.setDutchAuction(
+      dutchAuction.address
+    );
+    await setAuctionAddrTx.wait(1);
 
     // The LINK have been given to the deployer of the contract
     // therefore the first account, so we transfer some to PianoKing
@@ -217,5 +223,27 @@ describe("Dutch Auction", function () {
         value: ethers.utils.parseEther("1.7"),
       })
     ).to.revertedWith("Auction expired");
+  });
+
+  it("Should not let sender buy below reserve price", async function () {
+    // Initiate a dutch auction of 60 seconds
+    const tx = await dutchAuction.initiateAuction(
+      60,
+      ethers.utils.parseEther("0.2"),
+      ethers.utils.parseEther("2"),
+      ethers.utils.parseEther("1")
+    );
+    await tx.wait(1);
+    // We wait 6 seconds
+    await wait(6000);
+    // Even if after 6 seconds the price should be down to 0.8 ETH
+    // the reserve price kicks in and the sender can only buy at 1 ETH
+    // at least from that point, until the auction expires. So we expect
+    // the transaction to fail with "Not enough funds" if we try to go for 0.8 ETH
+    await expect(
+      dutchAuction.connect(buyer).buy({
+        value: ethers.utils.parseEther("0.8"),
+      })
+    ).to.revertedWith("Not enough funds");
   });
 });

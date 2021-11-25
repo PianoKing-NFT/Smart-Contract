@@ -9,7 +9,7 @@ import {
   LinkToken,
 } from "../typechain";
 
-describe("PianoKing", function () {
+describe("Piano King", function () {
   let whiteList: PianoKingWhitelist;
   let pianoKing: PianoKing;
   let vrfCoordinator: VRFCoordinatorMock;
