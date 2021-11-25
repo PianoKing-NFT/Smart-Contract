@@ -84,14 +84,14 @@ describe("PianoKing", function () {
     ).to.be.reverted;
   });
 
-  it("Should mint a random NFT with 0.25 ETH", async function () {
+  it("Should mint a random NFT with 0.2 ETH", async function () {
     // The contract should have all the LINK received before
     expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
       INITIAL_LINK_BALANCE
     );
     // Initiate a randomness request to mint an NFT
     const tx = await pianoKing.connect(buyer).mint({
-      value: ethers.utils.parseEther("0.25"),
+      value: ethers.utils.parseEther("0.2"),
     });
     tx.wait(1);
     // We get the request id of the randomness request from the events
@@ -134,7 +134,7 @@ describe("PianoKing", function () {
     );
     // Initiate a randomness request to mint an NFT
     const tx = await pianoKing.connect(buyer).mint({
-      value: ethers.utils.parseEther("0.25"),
+      value: ethers.utils.parseEther("0.2"),
     });
     tx.wait(1);
     // We get the request id of the randomness request from the events
@@ -171,7 +171,7 @@ describe("PianoKing", function () {
 
     // Initiate anoter randomness request to mint an NFT
     const tx2 = await pianoKing.connect(buyer).mint({
-      value: ethers.utils.parseEther("0.25"),
+      value: ethers.utils.parseEther("0.2"),
     });
     tx2.wait(1);
 
@@ -200,8 +200,9 @@ describe("PianoKing", function () {
     tokenId = mintEvents[1].args.tokenId;
     to = mintEvents[1].args.to;
     // The token should not be the number 43 since it was already picked earlier
-    // It will get instead the last id that was moved into that slot, so 10,000
-    expect(tokenId).to.be.equal(10000);
+    // It will get instead the last id that was moved into that slot, so 5,000
+    // since the first phase is for the first 5000
+    expect(tokenId).to.be.equal(5000);
     // The sender of the original transaction should be the owner of minted token
     expect(to).to.be.equal(buyer.address);
   });
@@ -213,7 +214,7 @@ describe("PianoKing", function () {
     );
     // Initiate a randomness request to mint an NFT
     const tx = await pianoKing.connect(buyer).mint({
-      value: ethers.utils.parseEther("0.25"),
+      value: ethers.utils.parseEther("0.2"),
     });
     tx.wait(1);
     // We get the request id of the randomness request from the events
@@ -243,7 +244,7 @@ describe("PianoKing", function () {
     const tokenId = mintEvent.args.tokenId;
     const to = mintEvent.args.to;
     // The token should be the number 50 since the Chainlink VRF returned 20049
-    // which should be modulo 10000, so 49. Since the contract add plus one to
+    // which should be modulo 5000, so 49. Since the contract add plus one to it
     // as to start the ids at 1 and not 0, we'll get 50
     expect(tokenId).to.be.equal(50);
     // The sender of the original transaction should be the owner of minted token
@@ -257,7 +258,7 @@ describe("PianoKing", function () {
     );
     // Initiate a randomness request to mint an NFT
     const tx = await pianoKing.connect(buyer).mint({
-      value: ethers.utils.parseEther("0.25"),
+      value: ethers.utils.parseEther("0.2"),
     });
     tx.wait(1);
     // We get the request id of the randomness request from the events
@@ -292,14 +293,14 @@ describe("PianoKing", function () {
     expect(to).to.be.equal(buyer.address);
   });
 
-  it("Should mint a random NFT with token id 10000 when provided with random number 9999", async function () {
+  it("Should mint a random NFT with token id 5000 when provided with random number 4999", async function () {
     // The contract should have all the LINK received before
     expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
       INITIAL_LINK_BALANCE
     );
     // Initiate a randomness request to mint an NFT
     const tx = await pianoKing.connect(buyer).mint({
-      value: ethers.utils.parseEther("0.25"),
+      value: ethers.utils.parseEther("0.2"),
     });
     tx.wait(1);
     // We get the request id of the randomness request from the events
@@ -310,9 +311,9 @@ describe("PianoKing", function () {
     const requestId = requestRandomnessEvent.args.requestId;
     // The requester should be the buyer
     expect(requestRandomnessEvent.args.requester).to.be.equal(buyer.address);
-    // Mock a response from Chainlink oracles with the number 20049 as so-called
+    // Mock a response from Chainlink oracles with the number 4999 as so-called
     // random number
-    const randomNumber = 9999;
+    const randomNumber = 4999;
     const vrfTx = await vrfCoordinator.callBackWithRandomness(
       requestId,
       randomNumber,
@@ -328,21 +329,21 @@ describe("PianoKing", function () {
     const [mintEvent] = await pianoKing.queryFilter(mintFilter);
     const tokenId = mintEvent.args.tokenId;
     const to = mintEvent.args.to;
-    // The token should be the number 10000 since 9999 is actually the last index
-    // in the range
-    expect(tokenId).to.be.equal(10000);
+    // The token should be the number 5000 since 4999 is actually the last index
+    // in the range for the first phase
+    expect(tokenId).to.be.equal(5000);
     // The sender of the original transaction should be the owner of minted token
     expect(to).to.be.equal(buyer.address);
   });
 
-  it("Should mint a random NFT with token id 1 when provided with random number 10000", async function () {
+  it("Should mint a random NFT with token id 1 when provided with random number 50000", async function () {
     // The contract should have all the LINK received before
     expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
       INITIAL_LINK_BALANCE
     );
     // Initiate a randomness request to mint an NFT
     const tx = await pianoKing.connect(buyer).mint({
-      value: ethers.utils.parseEther("0.25"),
+      value: ethers.utils.parseEther("0.2"),
     });
     tx.wait(1);
     // We get the request id of the randomness request from the events
@@ -353,9 +354,9 @@ describe("PianoKing", function () {
     const requestId = requestRandomnessEvent.args.requestId;
     // The requester should be the buyer
     expect(requestRandomnessEvent.args.requester).to.be.equal(buyer.address);
-    // Mock a response from Chainlink oracles with the number 20049 as so-called
+    // Mock a response from Chainlink oracles with the number 5000 as so-called
     // random number
-    const randomNumber = 10000;
+    const randomNumber = 5000;
     const vrfTx = await vrfCoordinator.callBackWithRandomness(
       requestId,
       randomNumber,
@@ -371,18 +372,18 @@ describe("PianoKing", function () {
     const [mintEvent] = await pianoKing.queryFilter(mintFilter);
     const tokenId = mintEvent.args.tokenId;
     const to = mintEvent.args.to;
-    // The token should be the number 1 since 10000 modulo 10000 is 0
+    // The token should be the number 1 since 5000 modulo 5000 is 0
     // and we add 1 to it to start ids at 1
     expect(tokenId).to.be.equal(1);
     // The sender of the original transaction should be the owner of minted token
     expect(to).to.be.equal(buyer.address);
   });
 
-  it("Should fail to mint an NFT with less than 0.25 ETH", async function () {
-    // Try to mint with 0.24 ETH, so not enough
+  it("Should fail to mint an NFT with less than 0.2 ETH", async function () {
+    // Try to mint with 0.19 ETH, so not enough
     await expect(
       pianoKing.connect(buyer).mint({
-        value: ethers.utils.parseEther("0.24"),
+        value: ethers.utils.parseEther("0.19"),
       })
     ).to.be.revertedWith("Not enough funds");
   });
@@ -390,7 +391,7 @@ describe("PianoKing", function () {
   it("Should fail to mint second time if Chainlink VRF didn't respond", async function () {
     // This transaction should initiate a randomness request
     const tx = await pianoKing.connect(buyer).mint({
-      value: ethers.utils.parseEther("0.25"),
+      value: ethers.utils.parseEther("0.2"),
     });
     tx.wait(1);
 
@@ -398,7 +399,7 @@ describe("PianoKing", function () {
     // and no response has been given by Chainlink VRF yet, so it should fail
     await expect(
       pianoKing.connect(buyer).mint({
-        value: ethers.utils.parseEther("0.25"),
+        value: ethers.utils.parseEther("0.2"),
       })
     ).to.be.revertedWith("A minting is alreay in progress");
 
@@ -420,7 +421,7 @@ describe("PianoKing", function () {
     // Now the sender should be able to mint a new NFT again
     await expect(
       pianoKing.connect(buyer).mint({
-        value: ethers.utils.parseEther("0.25"),
+        value: ethers.utils.parseEther("0.2"),
       })
     ).to.be.not.reverted;
   });
@@ -443,7 +444,7 @@ describe("PianoKing", function () {
     // The transaction will fail since the contract doesn't have enough LINK
     await expect(
       pianoKing.connect(buyer).mint({
-        value: ethers.utils.parseEther("0.25"),
+        value: ethers.utils.parseEther("0.2"),
       })
     ).to.be.revertedWith("Not enough LINK");
 
@@ -457,7 +458,7 @@ describe("PianoKing", function () {
     // And now the transaction should work just fine
     await expect(
       pianoKing.connect(buyer).mint({
-        value: ethers.utils.parseEther("0.25"),
+        value: ethers.utils.parseEther("0.2"),
       })
     ).to.be.not.reverted;
   });
@@ -471,7 +472,7 @@ describe("PianoKing", function () {
       whiteLisTx.wait(1);
     }
 
-    const randomnessTx = await pianoKing.requestPresaleRN();
+    const randomnessTx = await pianoKing.requestGroupRN();
     randomnessTx.wait(1);
 
     // We get the request id of the randomness request from the events
@@ -512,6 +513,8 @@ describe("PianoKing", function () {
     expect(mintEvents[0].args.tokenId).to.be.not.equal(
       mintEvents[1].args.tokenId
     );
-    // console.log(mintEvents.map((x) => x.args.tokenId.toNumber()));
+    /* console.log(
+      mintEvents.map((x) => x.args.tokenId.toNumber()).filter((x) => x <= 150)
+    ); */
   });
 });

@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  */
 contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
   // 500 token available for sale per auction
-  uint256 public constant TOKEN_PER_AUCTIONS = 500;
+  uint256 public constant TOKEN_PER_AUCTION = 500;
 
   struct Auction {
     uint256 startingPrice;
@@ -70,7 +70,7 @@ contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
     // To follow the amount of tokens left in the auction
     // 500 are to be sold, once 0 is reached the auction
     // is considered finished
-    auction.tokensLeft = TOKEN_PER_AUCTIONS;
+    auction.tokensLeft = TOKEN_PER_AUCTION;
     // Below that price, the token cannot be sold
     auction.reservePrice = reservePrice;
   }
@@ -100,7 +100,7 @@ contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
       ? discountedPrice
       : currentAuction.reservePrice;
 
-    // If the sender send enough to match the price then he wins that token
+    // If the sender send enough to match the price then he/she wins that token
     require(msg.value >= price, "Not enough funds");
 
     // Mint a random NFT for the buyer

@@ -12,12 +12,15 @@ async function main() {
   // If this script is run directly using `node` you may want to call compile
   // manually to make sure everything is compiled
   // await hre.run('compile');
-
   // We get the contract to deploy
-  const Whitelist = await ethers.getContractFactory("PianoKingWhitelist");
+  /* const Whitelist = await ethers.getContractFactory("PianoKingWhitelist");
   const whiteList = await Whitelist.deploy();
   await whiteList.deployed();
-  console.log("Whitelist deployed to:", whiteList.address);
+  console.log("Whitelist deployed to:", whiteList.address); */
+  /**
+   * Idea for deployment: Listen to gas price with Etherscan API and trigger
+   * the deployment of the contracts at a less expensive time
+   */
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -14,8 +14,8 @@ import "@openzeppelin/contracts/utils/Address.sol";
  */
 contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   using Address for address payable;
-  // The amount in Wei (0.25 ETH by default) required to give this contract to mint an NFT
-  uint256 private minPrice = 250000000000000000;
+  // The amount in Wei (0.2 ETH by default) required to give this contract to mint an NFT
+  uint256 private minPrice = 200000000000000000;
   // The max supply possible is 10,000 tokens
   uint256 private constant MAX_SUPPLY = 10000;
   // The current minted supply
@@ -29,13 +29,13 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
 
   // Address whitelisted by the whitelist contract => boolean indicating
   // if the tokens pre-purchased during presale have been minted already or not
-  mapping(address => bool) private whiteListedAddressToMinted;
+  // mapping(address => bool) private whiteListedAddressToMinted;
 
   // Address => how many free tokens this address can mint
   mapping(address => uint256) private preApprovedAddress;
 
-  // The random number used for presale mints
-  uint256 private randomNumberForPresaleMint;
+  // The random number used for group mints
+  uint256 private globalRandomNumber;
 
   PianoKingWhitelist private pianoKingWhitelist;
   // Address authorized to withdraw the funds
@@ -110,9 +110,9 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   }
 
   /**
-   * @dev Request the random number to be use for presale minting
+   * @dev Request the random number to be use for group minting
    */
-  function requestPresaleRN() external onlyOwner {
+  function requestGroupRN() external onlyOwner {
     // Can trigger only one randomness request at a time
     require(
       !hasRequestedRandomness[address(this)],
@@ -123,7 +123,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     // Request a random number to Chainlink oracles
     bytes32 requestId = requestRandomness(keyhash, fee);
     // Link the request id to the contract address indicating
-    // that this request has been made with the mintPreSaleTokens
+    // that this request has been made with the requestGroupRN function
     requestIdToAddress[requestId] = address(this);
     hasRequestedRandomness[address(this)] = true;
     emit RequestedRandomness(requestId, address(this));
@@ -142,10 +142,11 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     address requester = requestIdToAddress[requestId];
     // Request made by the contract so coming from the requestPresaleRN function
     if (requester == address(this)) {
-      randomNumberForPresaleMint = randomNumber;
+      globalRandomNumber = randomNumber;
     } else {
       // Request made by a random sender
-      uint256 tokenId = generateTokenId(randomNumber);
+      (uint256 lowerBound, uint256 upperBound) = getBounds();
+      uint256 tokenId = generateTokenId(randomNumber, lowerBound, upperBound);
       _safeMint(requester, tokenId);
     }
     emit RandomNumberReceived(requester);
@@ -160,7 +161,8 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
    */
   function presaleMint() external onlyOwner {
     address[] memory addrs = pianoKingWhitelist.getWhitelistedAddresses();
-    uint256 seedRN = randomNumberForPresaleMint;
+    uint256 seedRN = globalRandomNumber;
+    (uint256 lowerBound, uint256 upperBound) = getBounds();
     for (uint256 i = 0; i < addrs.length; i++) {
       address addr = addrs[i];
       uint256 allowance = pianoKingWhitelist.getWhitelistAllowance(addr);
@@ -169,15 +171,17 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
         // address and this given token to be minted
         // XOR is cheaper than keccak256 and is enough for the purpose of expanding
         // the random number.
-        uint256 tokenId = generateTokenId(seedRN ^ gasleft());
+        uint256 tokenId = generateTokenId(
+          seedRN ^ gasleft(),
+          lowerBound,
+          upperBound
+        );
         _owners[tokenId] = addr;
         emit Transfer(address(0), addr, tokenId);
         totalSupply += 1;
       }
       // Update the balance of the address
       _balances[addr] += allowance;
-      // Indicate that this address has now received its pre-purchased NFTs
-      whiteListedAddressToMinted[addr] = true;
     }
   }
 
@@ -185,12 +189,16 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
    * @dev Pick a random token id among the ones still available
    * @param randomNumber Random number which has previously provided by an oracle
    */
-  function generateTokenId(uint256 randomNumber) private returns (uint256) {
+  function generateTokenId(
+    uint256 randomNumber,
+    uint256 lowerBound,
+    uint256 upperBound
+  ) private returns (uint256) {
     // We get the number of ids remaining by substracting the total supply
-    // with the max supply
-    uint256 idsRemaining = MAX_SUPPLY - totalSupply;
-    // Keep the randomIndex within the 0 => 10,000 range
-    uint256 randomIndex = randomNumber % idsRemaining;
+    // with the upper bound
+    uint256 idsRemaining = upperBound - totalSupply;
+    // Keep the randomIndex within the lowerBound => upperBound range
+    uint256 randomIndex = lowerBound + (randomNumber % idsRemaining);
     // Pick the id at randomIndex within the ids remaining
     uint256 tokenId = getIdAt(randomIndex);
 
@@ -211,6 +219,32 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     } else {
       // Otherwise just return the i + 1 (as it starts at 1)
       return i + 1;
+    }
+  }
+
+  /**
+   * @dev Get the bounds of the range to generate the ids in
+   * The first phase contains the first 5000 ids which is for the presale
+   * and the following 4000. The first phase contains 25 legendary and 150
+   * heroic
+   * The second phase is the next 5000 divided each in 500 distributed in
+   * Dutch auctions. Each slot of 500 contains 2 legendary and 15 heroic.
+   * If a someone which to verify these data, he or she can do so by consulting
+   * the metadata of the tokens yet to be minted
+   */
+  function getBounds()
+    private
+    view
+    returns (uint256 lowerBound, uint256 upperBound)
+  {
+    if (totalSupply < 5000) {
+      // For the presale and the 4000 tokens following it
+      lowerBound = 0;
+      upperBound = 5000;
+    } else {
+      // To get the 500 tokens slots to be distributed by Dutch auctions
+      lowerBound = 5000 + ((totalSupply - 5000) / 500) * 500;
+      upperBound = lowerBound + 500;
     }
   }
 
