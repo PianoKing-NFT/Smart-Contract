@@ -178,15 +178,15 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
       for (uint256 j = 0; j < allowance; j++) {
         // Generate a number from the random number for the given
         // address and this given token to be minted
-        // XOR is cheaper than keccak256 and is enough for the purpose of expanding
-        // the random number.
         uint256 tokenId = generateTokenId(
-          seedRN ^ gasleft(),
+          uint256(keccak256(abi.encode(seedRN, totalSupply))),
           lowerBound,
           upperBound
         );
         _owners[tokenId] = addr;
         emit Transfer(address(0), addr, tokenId);
+        // Even this cost a lot we have to keep the total supply updated
+        // to prevent tokenId collisions
         totalSupply += 1;
       }
       // Update the balance of the address

@@ -513,8 +513,15 @@ describe("Piano King", function () {
     expect(mintEvents[0].args.tokenId).to.be.not.equal(
       mintEvents[1].args.tokenId
     );
+    const tokenIds = mintEvents.map((x) => x.args.tokenId.toNumber());
+    for (const tokenId of tokenIds) {
+      expect(tokenId).to.be.lessThanOrEqual(5000);
+    }
+    // Since a Set cannot have duplicates we check here that
+    // all the token ids generated are unique
+    expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
     /* console.log(
-      mintEvents.map((x) => x.args.tokenId.toNumber()).filter((x) => x <= 150)
-    ); */
+      mintEvents.map((x) => x.args.tokenId.toNumber()).filter((x) => x > 4975)
+    );  */
   });
 });
