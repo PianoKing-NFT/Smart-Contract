@@ -15,9 +15,9 @@ import "@openzeppelin/contracts/utils/Address.sol";
 contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   using Address for address payable;
   // The amount in Wei (0.2 ETH by default) required to give this contract to mint an NFT
-  uint256 private minPrice = 200000000000000000;
+  uint256 internal minPrice = 200000000000000000;
   // The max supply possible is 10,000 tokens
-  uint256 private constant MAX_SUPPLY = 10000;
+  uint256 internal constant MAX_SUPPLY = 10000;
   // The current minted supply
   uint256 public totalSupply;
   // TO-DO: replace this url by the base url where the metadata
@@ -25,15 +25,15 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   string internal baseURI = "https://example.com/";
   // Mapping letting us avoid collisions while choosing a random token id
   // in a very cost effective way
-  mapping(uint256 => uint256) private movedIds;
+  mapping(uint256 => uint256) internal movedIds;
 
   // Address => how many free tokens this address can mint
-  mapping(address => uint256) private preApprovedAddress;
+  mapping(address => uint256) internal preApprovedAddress;
 
   // The random number used for group mints
-  uint256 private globalRandomNumber;
+  uint256 internal globalRandomNumber;
 
-  PianoKingWhitelist private pianoKingWhitelist;
+  PianoKingWhitelist public pianoKingWhitelist;
   // Address authorized to withdraw the funds
   address public pianoKingWallet = 0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586;
 
@@ -49,8 +49,8 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   mapping(address => bool) public hasRequestedRandomness;
 
   // Data for chainlink
-  bytes32 private keyhash;
-  uint256 private fee;
+  bytes32 internal keyhash;
+  uint256 internal fee;
 
   event RequestedRandomness(
     bytes32 indexed requestId,
@@ -167,67 +167,76 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
    * @dev Mint all the token pre-purchased during the presale
    * We don't use neither the _mint nor the _safeMint function
    * to optimize the process as much as possible in terms of fee
+   * TO-DO: allow to call this function multiple times to allow
+   * to do it in chuncks in order to spread the costs over several
+   * transactions
    */
   function presaleMint() external onlyOwner {
     address[] memory addrs = pianoKingWhitelist.getWhitelistedAddresses();
     uint256 seedRN = globalRandomNumber;
     (uint256 lowerBound, uint256 upperBound) = getBounds();
+    uint256 tokenId = (seedRN % 1000) + 1;
     for (uint256 i = 0; i < addrs.length; i++) {
       address addr = addrs[i];
       uint256 allowance = pianoKingWhitelist.getWhitelistAllowance(addr);
       for (uint256 j = 0; j < allowance; j++) {
         // Generate a number from the random number for the given
-        // address and this given token to be minted
-        uint256 tokenId = generateTokenId(
-          uint256(keccak256(abi.encode(seedRN, totalSupply))),
-          lowerBound,
-          upperBound
-        );
+        // address and this given token to be
         _owners[tokenId] = addr;
+        tokenId = generateTokenId(tokenId, lowerBound, upperBound);
         emit Transfer(address(0), addr, tokenId);
-        // Even this cost a lot we have to keep the total supply updated
-        // to prevent tokenId collisions
-        totalSupply += 1;
       }
       // Update the balance of the address
       _balances[addr] += allowance;
     }
+    // We use a memory variable to avoid too much interaction with the storage
+    totalSupply += 1000;
   }
 
   /**
-   * @dev Pick a random token id among the ones still available
-   * @param randomNumber Random number which has previously provided by an oracle
+   * @dev Generate a number from a random number for the tokenId that is guarranteed
+   * not to repeat within one cycle (defined by the size of the modulo) if we call
+   * this function many times in a row.
+   * We use the properties of prime numbers to prevent collisions naturally without
+   * manual checks that would be expensive since they would require writing the
+   * storage or the memory.
+   * @param randomNumber True random number which has been previously provided by an oracle
+   * or previous tokenId that was generated from it. Since we're generating a sequence
+   * of numbers defined by recurrence we need the previous number as the base for the next.
    */
   function generateTokenId(
     uint256 randomNumber,
     uint256 lowerBound,
     uint256 upperBound
-  ) private returns (uint256) {
-    // We get the number of ids remaining by substracting the total supply
-    // with the upper bound
-    uint256 idsRemaining = upperBound - totalSupply;
-    // Keep the randomIndex within the lowerBound => upperBound range
-    uint256 randomIndex = lowerBound + (randomNumber % idsRemaining);
-    // Pick the id at randomIndex within the ids remaining
-    uint256 tokenId = getIdAt(randomIndex);
-
-    // Move the last id in the remaining ids into position randomIndex
-    // That way if we get that randomIndex again it will return that number
-    idsRemaining--;
-    movedIds[randomIndex] = getIdAt(idsRemaining);
-    // Free the storage used at the last index if used
-    delete movedIds[idsRemaining];
-
-    return tokenId;
-  }
-
-  function getIdAt(uint256 i) private view returns (uint256) {
-    // Return the number stored at index i if it has been defined
-    if (movedIds[i] != 0) {
-      return movedIds[i];
+  ) internal pure returns (uint256 tokenId) {
+    // A lower bound of 0 indicate it's the presale batch mint with ids
+    // between 1 and 1000 (inclusive)
+    if (lowerBound == 0) {
+      tokenId = ((randomNumber + 739) % 1009) + 1;
+      // We don't need a loop as if the number is between 1000 and 1009,
+      // we are guarranteed the next one will not
+      if (tokenId > upperBound) {
+        tokenId = ((tokenId + 739) % 1009) + 1;
+      }
+    } else if (lowerBound == 1000) {
+      // A lower bound of 1000 indicates it's post-presale batch of 4000
+      // tokens with ids between 1001 and 5000 (inclusive)
+      tokenId = lowerBound + ((randomNumber + 3209) % 4001) + 1;
+      // We don't need a loop as if the number is 5001,
+      // we are guarranteed the next one will not
+      if (tokenId > upperBound) {
+        tokenId = lowerBound + ((tokenId + 3209) % 4001) + 1;
+      }
     } else {
-      // Otherwise just return the i + 1 (as it starts at 1)
-      return i + 1;
+      // If the lower bound is above a 1000 (and actually 5000 and above)
+      // then its the phase 2 in which we are minting in batch 500 tokens
+      // paid for during the Dutch Auction
+      tokenId = lowerBound + ((randomNumber + 367) % 503) + 1;
+      // We don't need a loop as if the number is between 500 and 503,
+      // we are guarranteed the next one will not
+      if (tokenId > upperBound) {
+        tokenId = lowerBound + ((tokenId + 367) % 503) + 1;
+      }
     }
   }
 
@@ -238,19 +247,23 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
    * heroic
    * The second phase is the next 5000 divided each in 500 distributed in
    * Dutch auctions. Each slot of 500 contains 2 legendary and 15 heroic.
-   * If someone whish to verify these data, he or she can do so by consulting
+   * If someone wish to verify these data, he or she can do so by consulting
    * the metadata of the tokens yet to be minted
    * @param lowerBound The starting position from which the tokenId will be randomly picked
    * @param upperBound The ending position until which the tokenId will be randomly picked
    */
   function getBounds()
-    private
+    internal
     view
     returns (uint256 lowerBound, uint256 upperBound)
   {
-    if (totalSupply < 5000) {
-      // For the presale and the 4000 tokens following it
+    if (totalSupply < 1000) {
+      // For the presale
       lowerBound = 0;
+      upperBound = 1000;
+    } else if (totalSupply < 5000) {
+      // For the 4000 tokens following the presale
+      lowerBound = 1000;
       upperBound = 5000;
     } else {
       // To get the 500 tokens slots to be distributed by Dutch auctions

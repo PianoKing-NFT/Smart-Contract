@@ -20,7 +20,7 @@ function wait(ms: number) {
 }
 
 /**
- * Note, most of this test can only pass on a local hardhat network
+ * Note, most of this tests can only pass on a local hardhat network
  * since any delay would make them fail.
  */
 describe("Dutch Auction", function () {
