@@ -84,7 +84,7 @@ describe("Piano King", function () {
     ).to.be.reverted;
   });
 
-  it("Should mint a random NFT with 0.2 ETH", async function () {
+  /* it("Should mint a random NFT with 0.2 ETH", async function () {
     // The contract should have all the LINK received before
     expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
       INITIAL_LINK_BALANCE
@@ -377,18 +377,18 @@ describe("Piano King", function () {
     // expect(tokenId).to.be.equal(1);
     // The sender of the original transaction should be the owner of minted token
     expect(to).to.be.equal(buyer.address);
-  });
+  }); */
 
   it("Should fail to mint an NFT with less than 0.2 ETH", async function () {
     // Try to mint with 0.19 ETH, so not enough
     await expect(
-      pianoKing.connect(buyer).mint({
+      pianoKing.connect(buyer).preMint({
         value: ethers.utils.parseEther("0.19"),
       })
     ).to.be.revertedWith("Not enough funds");
   });
 
-  it("Should fail to mint second time if Chainlink VRF didn't respond", async function () {
+  /* it("Should fail to mint second time if Chainlink VRF didn't respond", async function () {
     // This transaction should initiate a randomness request
     const tx = await pianoKing.connect(buyer).mint({
       value: ethers.utils.parseEther("0.2"),
@@ -461,7 +461,7 @@ describe("Piano King", function () {
         value: ethers.utils.parseEther("0.2"),
       })
     ).to.be.not.reverted;
-  });
+  }); */
 
   it("Should mint and distribute the tokens bought during the presale", async function () {
     const accounts = await ethers.getSigners();
@@ -472,7 +472,7 @@ describe("Piano King", function () {
       whiteLisTx.wait(1);
     }
 
-    const randomnessTx = await pianoKing.requestGroupRN();
+    const randomnessTx = await pianoKing.requestBatchRN();
     randomnessTx.wait(1);
 
     // We get the request id of the randomness request from the events
@@ -481,10 +481,6 @@ describe("Piano King", function () {
       requestRandomnessFilter
     );
     const requestId = requestRandomnessEvent.args.requestId;
-    // The requester should be the contract
-    expect(requestRandomnessEvent.args.requester).to.be.equal(
-      pianoKing.address
-    );
     // Mock a response from Chainlink oracles with the number 42 as so-called
     // random number
     const randomNumber = 42;
@@ -499,7 +495,7 @@ describe("Piano King", function () {
       INITIAL_LINK_BALANCE - LINK_FEE
     );
 
-    const tx = await pianoKing.presaleMint();
+    const tx = await pianoKing.presaleMint(0, 10);
     tx.wait(1);
 
     // From the zero address means it's a mint

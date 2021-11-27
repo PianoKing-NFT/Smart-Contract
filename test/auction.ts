@@ -179,11 +179,6 @@ describe("Dutch Auction", function () {
     ] = await dutchAuction.auctions(0);
     // One token has been given to the sender
     expect(tokensLeft).to.be.equal(499);
-    // We check on the Piano King contract that a randomness request has been
-    // initiated for the sender
-    expect(await pianoKing.hasRequestedRandomness(buyer.address)).to.be.equal(
-      true
-    );
   });
 
   it("Should not let sender buy if price doesn't match", async function () {

@@ -104,13 +104,13 @@ describe("Piano King Phase 2", function () {
     // We expect it to fail since the total supply is 5000, the phase 2
     // is on and only Dutch Auction contract can mint
     await expect(
-      pianoKing.connect(buyer).mint({
+      pianoKing.connect(buyer).preMint({
         value: ethers.utils.parseEther("0.2"),
       })
     ).to.be.revertedWith("Only through auction");
   });
 
-  it("Should mint a random NFT after purchase through auction in the first slot of phase 2", async function () {
+  /* it("Should mint a random NFT after purchase through auction in the first slot of phase 2", async function () {
     // Initiate a dutch auction of 60 seconds
     const tx = await dutchAuction.initiateAuction(
       60,
@@ -292,5 +292,5 @@ describe("Piano King Phase 2", function () {
     // Since a Set cannot have duplicates we check here that
     // all the token ids generated are unique
     expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
-  });
+  }); */
 });

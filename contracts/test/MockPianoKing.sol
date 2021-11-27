@@ -25,7 +25,7 @@ contract MockPianoKing is PianoKing {
     totalSupply = supply;
   }
 
-  function batchMint(address[] calldata addrs, uint256[] calldata allowances)
+  /* function batchMint(address[] calldata addrs, uint256[] calldata allowances)
     external
     onlyOwner
   {
@@ -47,5 +47,5 @@ contract MockPianoKing is PianoKing {
     }
     // We use a memory variable to avoid too much interaction with the storage
     totalSupply += 1000;
-  }
+  } */
 }

@@ -106,7 +106,7 @@ contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
     require(msg.value >= price, "Not enough funds");
 
     // Mint a random NFT for the buyer
-    pianoKing.mintFor{ value: msg.value }(msg.sender);
+    pianoKing.preMintFor{ value: msg.value }(msg.sender);
     // Decrease by one the number of token
     currentAuction.tokensLeft -= 1;
 
