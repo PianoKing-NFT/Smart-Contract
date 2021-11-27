@@ -84,40 +84,15 @@ describe("Piano King", function () {
     ).to.be.reverted;
   });
 
-  /* it("Should mint a random NFT with 0.2 ETH", async function () {
-    // The contract should have all the LINK received before
-    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
-      INITIAL_LINK_BALANCE
-    );
+  /* it("Should premint a random NFT with 0.2 ETH", async function () {
+    expect(await pianoKing.supplyLeft()).to.been.equal(999);
     // Initiate a randomness request to mint an NFT
-    const tx = await pianoKing.connect(buyer).mint({
+    const tx = await pianoKing.connect(buyer).preMint({
       value: ethers.utils.parseEther("0.2"),
     });
     tx.wait(1);
-    // We get the request id of the randomness request from the events
-    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
-    const [requestRandomnessEvent] = await pianoKing.queryFilter(
-      requestRandomnessFilter
-    );
-    const requestId = requestRandomnessEvent.args.requestId;
-    // The requester should be the buyer
-    expect(requestRandomnessEvent.args.requester).to.be.equal(buyer.address);
-    // Mock a response from Chainlink oracles with the number 42 as so-called
-    // random number
-    const randomNumber = 42;
-    const vrfTx = await vrfCoordinator.callBackWithRandomness(
-      requestId,
-      randomNumber,
-      pianoKing.address
-    );
-    await vrfTx.wait(1);
-    // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
-    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
-      INITIAL_LINK_BALANCE - LINK_FEE
-    );
-    // From the zero address means it's a mint
-    const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
-    const [mintEvent] = await pianoKing.queryFilter(mintFilter);
+
+    expect(await pianoKing.supplyLeft()).to.been.equal(999);
     const tokenId = mintEvent.args.tokenId;
     const to = mintEvent.args.to;
     // The token should be the number 43 since the Chainlink VRF returned 42
@@ -511,7 +486,7 @@ describe("Piano King", function () {
     );
     const tokenIds = mintEvents.map((x) => x.args.tokenId.toNumber());
     for (const tokenId of tokenIds) {
-      expect(tokenId).to.be.lessThanOrEqual(5000);
+      expect(tokenId).to.be.lessThanOrEqual(1000);
     }
     // Since a Set cannot have duplicates we check here that
     // all the token ids generated are unique

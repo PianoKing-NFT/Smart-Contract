@@ -90,6 +90,9 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
    * the min price required to do so
    */
   function preMintFor(address addr) public payable {
+    // The presale mint has to be completed before users can call
+    // this function
+    require(totalSupply >= 1000, "Presale mint not completed");
     bool isDutchAuction = totalSupply >= 5000;
     // After the first phase only the Piano King Dutch Auction contract
     // can mint
@@ -133,7 +136,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   }
 
   /**
-   * @dev Request the random number to be use for a batch mint
+   * @dev Request the random number to be used for a batch mint
    */
   function requestBatchRN() external onlyOwner {
     // Can trigger only one randomness request at a time
@@ -198,7 +201,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     uint256 start,
     uint256 end
   ) internal {
-    // Check that random number is ready to be used
+    // Check that the random number is ready to be used
     require(canUseRandomNumber, "Random number not ready");
     // Check that the end is not longer than the addrs array
     require(end <= addrs.length, "Out of bounds");
@@ -208,15 +211,15 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
       start + lowerBound == totalSupply,
       "Cannot skip or overlap addresses"
     );
-    uint256 tokenId = lowerBound + (globalRandomNumber % upperBound) + 1;
+    uint256 tokenId = globalRandomNumber;
     for (uint256 i = start; i < end; i++) {
       address addr = addrs[i];
       uint256 allowance = getAllowance(addr);
       for (uint256 j = 0; j < allowance; j++) {
         // Generate a number from the random number for the given
         // address and this given token to be
-        _owners[tokenId] = addr;
         tokenId = generateTokenId(tokenId, lowerBound, upperBound);
+        _owners[tokenId] = addr;
         emit Transfer(address(0), addr, tokenId);
       }
       // Update the balance of the address
@@ -239,7 +242,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
    * @dev Get the allowance of an address depending of the current supply
    * @param addr Address to get the allowance of
    */
-  function getAllowance(address addr) internal view returns (uint256) {
+  function getAllowance(address addr) internal view virtual returns (uint256) {
     // If the supply is below a 1000 then we're getting the white list allowance
     // otherwise it's premint allowance
     return
@@ -353,9 +356,9 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   }
 
   /**
-   * @dev Add addresses that can mint an NFT without paying
+   * @dev Add addresses that can premint an NFT without paying
    */
-  function addGiveAwayAddresses(
+  function addPreApprovedAddresses(
     address[] calldata addrs,
     uint256[] calldata amounts
   ) external onlyOwner {
@@ -418,7 +421,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     return baseURI;
   }
 
-  function getMinPrice() external view returns (uint256) {
+  function getMinPrice() external pure returns (uint256) {
     return MIN_PRICE;
   }
 

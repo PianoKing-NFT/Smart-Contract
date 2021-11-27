@@ -235,22 +235,20 @@ describe("Piano King Phase 2", function () {
     // expect(tokenId).to.be.equal(9500 + randomNumber + 1);
     // The sender of the original transaction should be the owner of minted token
     expect(to).to.be.equal(buyer.address);
-  });
+  }); */
 
   it("Should do a batch mint", async function () {
     const supplyTx = await pianoKing.setTotalSupply(0);
     await supplyTx.wait(1);
 
     const addresses = [];
-    const allowances = [];
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 250; i++) {
       addresses.push(ethers.utils.hexZeroPad(ethers.utils.hexlify(i), 20));
-      allowances.push(1);
     }
     // console.log(addresses);
     // console.log(allowances);
 
-    const randomnessTx = await pianoKing.requestGroupRN();
+    const randomnessTx = await pianoKing.requestBatchRN();
     randomnessTx.wait(1);
 
     // We get the request id of the randomness request from the events
@@ -259,10 +257,7 @@ describe("Piano King Phase 2", function () {
       requestRandomnessFilter
     );
     const requestId = requestRandomnessEvent.args.requestId;
-    // The requester should be the contract
-    expect(requestRandomnessEvent.args.requester).to.be.equal(
-      pianoKing.address
-    );
+
     // Mock a response from Chainlink oracles with the number 42 as so-called
     // random number
     const randomNumber = 42;
@@ -277,20 +272,21 @@ describe("Piano King Phase 2", function () {
       INITIAL_LINK_BALANCE - LINK_FEE
     );
 
-    const tx = await pianoKing.batchMint(addresses, allowances);
+    const tx = await pianoKing.doBatchMint(addresses, 0, 125);
     tx.wait(1);
+    const tx2 = await pianoKing.doBatchMint(addresses, 125, 250);
+    tx2.wait(1);
 
     // From the zero address means it's a mint
     const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
     const mintEvents = await pianoKing.queryFilter(mintFilter);
-    expect(mintEvents.length).to.be.equal(200);
+    expect(mintEvents.length).to.be.equal(1000);
     const tokenIds = mintEvents.map((x) => x.args.tokenId.toNumber());
     for (const tokenId of tokenIds) {
-      expect(tokenId).to.be.lessThanOrEqual(5000);
+      expect(tokenId).to.be.lessThanOrEqual(1000).greaterThan(0);
     }
-    console.log(tokenIds);
     // Since a Set cannot have duplicates we check here that
     // all the token ids generated are unique
     expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
-  }); */
+  });
 });
