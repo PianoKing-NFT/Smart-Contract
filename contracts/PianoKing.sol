@@ -44,8 +44,6 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   bool internal hasRequestedRandomness;
   // Indicate if the random number is ready to be used
   bool internal canUseRandomNumber;
-  // The id of the current randomness request if any
-  bytes32 internal currentRequestId;
 
   PianoKingWhitelist public pianoKingWhitelist;
   // Address authorized to withdraw the funds
@@ -145,10 +143,10 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     // We need some LINK to pay a fee to the oracles
     require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK");
     // Request a random number to Chainlink oracles
-    currentRequestId = requestRandomness(keyhash, fee);
+    bytes32 requestId = requestRandomness(keyhash, fee);
     // Indicate that a request has been initiated
     hasRequestedRandomness = true;
-    emit RequestedRandomness(currentRequestId);
+    emit RequestedRandomness(requestId);
   }
 
   /**
@@ -178,11 +176,30 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
    * @param end At what index of the array of preMintAddresses to stop
    */
   function batchMint(uint256 start, uint256 end) external onlyOwner {
-    // The code looks very similar to the presale mint function
-    // but because we're interacting with the white list contract in
-    // the other and doing a copy of the allowances would too costly
-    // we have to repeat ourselves a bit for the sake of less gas consumption
-    address[] memory addrs = preMintAddresses;
+    _batchMint(preMintAddresses, start, end);
+  }
+
+  /**
+   * @dev Mint all the token pre-purchased during the presale
+   * We don't use neither the _mint nor the _safeMint function
+   * to optimize the process as much as possible in terms of fee
+   * @param start At what index of the array of white listed addresses to start
+   * @param end At what index of the array of white listed addresses to stop
+   */
+  function presaleMint(uint256 start, uint256 end) external onlyOwner {
+    _batchMint(pianoKingWhitelist.getWhitelistedAddresses(), start, end);
+  }
+
+  /**
+   * @dev Generic batch mint
+   */
+  function _batchMint(
+    address[] memory addrs,
+    uint256 start,
+    uint256 end
+  ) internal {
+    // Check that random number is ready to be used
+    require(canUseRandomNumber, "Random number not ready");
     // Check that the end is not longer than the addrs array
     require(end <= addrs.length, "Out of bounds");
     (uint256 lowerBound, uint256 upperBound) = getBounds();
@@ -195,7 +212,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     uint256 tokenId = (seedRN % 1000) + 1;
     for (uint256 i = start; i < end; i++) {
       address addr = addrs[i];
-      uint256 allowance = preMintAllowance[addr];
+      uint256 allowance = getAllowance(addr);
       for (uint256 j = 0; j < allowance; j++) {
         // Generate a number from the random number for the given
         // address and this given token to be
@@ -208,41 +225,28 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     }
     // Add the amount that has been minted to the total supply
     totalSupply += end - start;
+    if (end == addrs.length) {
+      // We've minted all the tokens of this batch, so this random number
+      // cannot be used anymore
+      canUseRandomNumber = false;
+    } else {
+      // Save the token id in the random number variable to continue the sequence
+      // on next call
+      globalRandomNumber = tokenId;
+    }
   }
 
   /**
-   * @dev Mint all the token pre-purchased during the presale
-   * We don't use neither the _mint nor the _safeMint function
-   * to optimize the process as much as possible in terms of fee
-   * @param start At what index of the array of white listed addresses to start
-   * @param end At what index of the array of white listed addresses to stop
+   * @dev Get the allowance of an address depending of the current supply
+   * @param addr Address to get the allowance of
    */
-  function presaleMint(uint256 start, uint256 end) external onlyOwner {
-    address[] memory addrs = pianoKingWhitelist.getWhitelistedAddresses();
-    uint256 seedRN = globalRandomNumber;
-    // Check that the end is not longer than the addrs array
-    require(end <= addrs.length, "Out of bounds");
-    (uint256 lowerBound, uint256 upperBound) = getBounds();
-    // Check that the start is right at the end of the previous call
-    require(
-      start + lowerBound == totalSupply,
-      "Cannot skip or overlap addresses"
-    );
-    uint256 tokenId = (seedRN % 1000) + 1;
-    for (uint256 i = start; i < end; i++) {
-      address addr = addrs[i];
-      uint256 allowance = pianoKingWhitelist.getWhitelistAllowance(addr);
-      for (uint256 j = 0; j < allowance; j++) {
-        // Generate a number from the random number for the given
-        // address and this given token to be
-        _owners[tokenId] = addr;
-        tokenId = generateTokenId(tokenId, lowerBound, upperBound);
-        emit Transfer(address(0), addr, tokenId);
-      }
-      // Update the balance of the address
-      _balances[addr] += allowance;
-    }
-    totalSupply += end - start;
+  function getAllowance(address addr) internal view returns (uint256) {
+    // If the supply is below a 1000 then we're getting the white list allowance
+    // otherwise it's premint allowance
+    return
+      totalSupply < 1000
+        ? pianoKingWhitelist.getWhitelistAllowance(addr)
+        : preMintAllowance[addr];
   }
 
   /**
