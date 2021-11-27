@@ -208,8 +208,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
       start + lowerBound == totalSupply,
       "Cannot skip or overlap addresses"
     );
-    uint256 seedRN = globalRandomNumber;
-    uint256 tokenId = (seedRN % 1000) + 1;
+    uint256 tokenId = lowerBound + (globalRandomNumber % upperBound) + 1;
     for (uint256 i = start; i < end; i++) {
       address addr = addrs[i];
       uint256 allowance = getAllowance(addr);
