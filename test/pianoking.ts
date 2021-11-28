@@ -470,7 +470,7 @@ describe("Piano King", function () {
       INITIAL_LINK_BALANCE - LINK_FEE
     );
 
-    const tx = await pianoKing.presaleMint(0, 10);
+    const tx = await pianoKing.presaleMint(10);
     tx.wait(1);
 
     // From the zero address means it's a mint

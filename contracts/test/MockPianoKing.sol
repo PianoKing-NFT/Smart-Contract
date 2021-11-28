@@ -25,12 +25,15 @@ contract MockPianoKing is PianoKing {
     totalSupply = supply;
   }
 
-  function doBatchMint(
-    address[] memory addrs,
-    uint256 start,
-    uint256 end
-  ) external onlyOwner {
-    _batchMint(addrs, start, end);
+  function setSupplyLeft(uint256 supply) external {
+    supplyLeft = supply;
+  }
+
+  function doBatchMint(address[] memory addrs, uint256 count)
+    external
+    onlyOwner
+  {
+    _batchMint(addrs, count);
   }
 
   function getAllowance(address addr) internal view override returns (uint256) {

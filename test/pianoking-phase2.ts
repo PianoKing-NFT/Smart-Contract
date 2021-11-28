@@ -241,6 +241,9 @@ describe("Piano King Phase 2", function () {
     const supplyTx = await pianoKing.setTotalSupply(0);
     await supplyTx.wait(1);
 
+    expect(await pianoKing.supplyLeft()).to.be.equal(0);
+    expect(await pianoKing.totalSupply()).to.be.equal(0);
+
     const addresses = [];
     for (let i = 0; i < 250; i++) {
       addresses.push(ethers.utils.hexZeroPad(ethers.utils.hexlify(i), 20));
@@ -272,9 +275,9 @@ describe("Piano King Phase 2", function () {
       INITIAL_LINK_BALANCE - LINK_FEE
     );
 
-    const tx = await pianoKing.doBatchMint(addresses, 0, 125);
+    const tx = await pianoKing.doBatchMint(addresses, 125);
     tx.wait(1);
-    const tx2 = await pianoKing.doBatchMint(addresses, 125, 250);
+    const tx2 = await pianoKing.doBatchMint(addresses, 125);
     tx2.wait(1);
 
     // From the zero address means it's a mint
@@ -288,5 +291,190 @@ describe("Piano King Phase 2", function () {
     // Since a Set cannot have duplicates we check here that
     // all the token ids generated are unique
     expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
+
+    expect(await pianoKing.supplyLeft()).to.be.equal(4000);
+    expect(await pianoKing.totalSupply()).to.be.equal(1000);
+  });
+
+  it("Should do a batch mint of 4000 tokens", async function () {
+    const supplyTx = await pianoKing.setTotalSupply(1000);
+    await supplyTx.wait(1);
+
+    expect(await pianoKing.totalSupply()).to.be.equal(1000);
+
+    const addresses = [];
+    for (let i = 0; i < 1000; i++) {
+      addresses.push(ethers.utils.hexZeroPad(ethers.utils.hexlify(i), 20));
+    }
+    // console.log(addresses);
+    // console.log(allowances);
+
+    const randomnessTx = await pianoKing.requestBatchRN();
+    randomnessTx.wait(1);
+
+    // We get the request id of the randomness request from the events
+    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+      requestRandomnessFilter
+    );
+    const requestId = requestRandomnessEvent.args.requestId;
+
+    // Mock a response from Chainlink oracles with the number 42 as so-called
+    // random number
+    const randomNumber = 42;
+    const vrfTx = await vrfCoordinator.callBackWithRandomness(
+      requestId,
+      randomNumber,
+      pianoKing.address
+    );
+    await vrfTx.wait(1);
+    // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE - LINK_FEE
+    );
+
+    const tx = await pianoKing.doBatchMint(addresses, 125);
+    tx.wait(1);
+    const tx2 = await pianoKing.doBatchMint(addresses, 125);
+    tx2.wait(1);
+    const tx3 = await pianoKing.doBatchMint(addresses, 125);
+    tx3.wait(1);
+    const tx4 = await pianoKing.doBatchMint(addresses, 125);
+    tx4.wait(1);
+    const tx5 = await pianoKing.doBatchMint(addresses, 125);
+    tx5.wait(1);
+    const tx6 = await pianoKing.doBatchMint(addresses, 125);
+    tx6.wait(1);
+    const tx7 = await pianoKing.doBatchMint(addresses, 125);
+    tx7.wait(1);
+    const tx8 = await pianoKing.doBatchMint(addresses, 125);
+    tx8.wait(1);
+
+    // From the zero address means it's a mint
+    const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
+    const mintEvents = await pianoKing.queryFilter(mintFilter);
+    expect(mintEvents.length).to.be.equal(4000);
+    const tokenIds = mintEvents.map((x) => x.args.tokenId.toNumber());
+    for (const tokenId of tokenIds) {
+      expect(tokenId).to.be.lessThanOrEqual(5000).greaterThan(1000);
+    }
+    // Since a Set cannot have duplicates we check here that
+    // all the token ids generated are unique
+    expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
+
+    expect(await pianoKing.supplyLeft()).to.be.equal(500);
+    expect(await pianoKing.totalSupply()).to.be.equal(5000);
+  });
+
+  it("Should do a batch mint of 500 tokens", async function () {
+    const supplyTx = await pianoKing.setTotalSupply(5000);
+    await supplyTx.wait(1);
+
+    expect(await pianoKing.totalSupply()).to.be.equal(5000);
+
+    const addresses = [];
+    for (let i = 0; i < 125; i++) {
+      addresses.push(ethers.utils.hexZeroPad(ethers.utils.hexlify(i), 20));
+    }
+    // console.log(addresses);
+    // console.log(allowances);
+
+    const randomnessTx = await pianoKing.requestBatchRN();
+    randomnessTx.wait(1);
+
+    // We get the request id of the randomness request from the events
+    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+      requestRandomnessFilter
+    );
+    const requestId = requestRandomnessEvent.args.requestId;
+
+    // Mock a response from Chainlink oracles with the number 42 as so-called
+    // random number
+    const randomNumber = 42;
+    const vrfTx = await vrfCoordinator.callBackWithRandomness(
+      requestId,
+      randomNumber,
+      pianoKing.address
+    );
+    await vrfTx.wait(1);
+    // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE - LINK_FEE
+    );
+
+    const tx = await pianoKing.doBatchMint(addresses, 125);
+    tx.wait(1);
+
+    // From the zero address means it's a mint
+    const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
+    const mintEvents = await pianoKing.queryFilter(mintFilter);
+    expect(mintEvents.length).to.be.equal(500);
+    const tokenIds = mintEvents.map((x) => x.args.tokenId.toNumber());
+    for (const tokenId of tokenIds) {
+      expect(tokenId).to.be.lessThanOrEqual(5500).greaterThan(5000);
+    }
+    // Since a Set cannot have duplicates we check here that
+    // all the token ids generated are unique
+    expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
+
+    expect(await pianoKing.supplyLeft()).to.be.equal(500);
+    expect(await pianoKing.totalSupply()).to.be.equal(5500);
+  });
+
+  it("Should do a batch mint of 500 tokens for the last slot", async function () {
+    const supplyTx = await pianoKing.setTotalSupply(9500);
+    await supplyTx.wait(1);
+
+    expect(await pianoKing.totalSupply()).to.be.equal(9500);
+
+    const addresses = [];
+    for (let i = 0; i < 125; i++) {
+      addresses.push(ethers.utils.hexZeroPad(ethers.utils.hexlify(i), 20));
+    }
+    // console.log(addresses);
+    // console.log(allowances);
+
+    const randomnessTx = await pianoKing.requestBatchRN();
+    randomnessTx.wait(1);
+
+    // We get the request id of the randomness request from the events
+    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+      requestRandomnessFilter
+    );
+    const requestId = requestRandomnessEvent.args.requestId;
+
+    // Mock a response from Chainlink oracles with the number 42 as so-called
+    // random number
+    const randomNumber = 42;
+    const vrfTx = await vrfCoordinator.callBackWithRandomness(
+      requestId,
+      randomNumber,
+      pianoKing.address
+    );
+    await vrfTx.wait(1);
+    // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE - LINK_FEE
+    );
+
+    const tx = await pianoKing.doBatchMint(addresses, 125);
+    tx.wait(1);
+
+    // From the zero address means it's a mint
+    const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
+    const mintEvents = await pianoKing.queryFilter(mintFilter);
+    expect(mintEvents.length).to.be.equal(500);
+    const tokenIds = mintEvents.map((x) => x.args.tokenId.toNumber());
+    for (const tokenId of tokenIds) {
+      expect(tokenId).to.be.lessThanOrEqual(10000).greaterThan(9500);
+    }
+    // Since a Set cannot have duplicates we check here that
+    // all the token ids generated are unique
+    expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
+
+    expect(await pianoKing.supplyLeft()).to.be.equal(500);
+    expect(await pianoKing.totalSupply()).to.be.equal(10000);
   });
 });

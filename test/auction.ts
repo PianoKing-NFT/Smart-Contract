@@ -93,6 +93,9 @@ describe("Dutch Auction", function () {
     );
     await setAuctionAddrTx.wait(1);
 
+    const setSupplyLeftTx = await pianoKing.setSupplyLeft(500);
+    await setSupplyLeftTx.wait(1);
+
     // The LINK have been given to the deployer of the contract
     // therefore the first account, so we transfer some to PianoKing
     // contract in order to pay the fees for randomness requests

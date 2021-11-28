@@ -26,8 +26,8 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   // of each token will be stored.
   string internal baseURI = "https://example.com/";
   // The supply left before next batch mint
-  // Start at 1000 for the presale batch mint
-  uint256 public supplyLeft = 1000;
+  // Start at 0 as there is no premint for presale
+  uint256 public supplyLeft = 0;
 
   // Address => how many free tokens this address can mint
   mapping(address => uint256) internal preApprovedAddress;
@@ -44,6 +44,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   bool internal hasRequestedRandomness;
   // Indicate if the random number is ready to be used
   bool internal canUseRandomNumber;
+  uint16 internal lastBatchIndex;
 
   PianoKingWhitelist public pianoKingWhitelist;
   // Address authorized to withdraw the funds
@@ -175,44 +176,36 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
    * This function is meant to be called multiple times in row to loop
    * through consecutive ranges of the array to spread gas costs as doing it
    * in one single transaction may cost more than a block gas limit
-   * @param start At what index of the array of preMintAddresses to start
-   * @param end At what index of the array of preMintAddresses to stop
+   * @param count How many addresses to loop through
    */
-  function batchMint(uint256 start, uint256 end) external onlyOwner {
-    _batchMint(preMintAddresses, start, end);
+  function batchMint(uint256 count) external onlyOwner {
+    _batchMint(preMintAddresses, count);
   }
 
   /**
    * @dev Mint all the token pre-purchased during the presale
    * We don't use neither the _mint nor the _safeMint function
-   * to optimize the process as much as possible in terms of fee
-   * @param start At what index of the array of white listed addresses to start
-   * @param end At what index of the array of white listed addresses to stop
+   * to optimize the process as much as possible in terms of gas
+   * @param count How many addresses to loop through
    */
-  function presaleMint(uint256 start, uint256 end) external onlyOwner {
-    _batchMint(pianoKingWhitelist.getWhitelistedAddresses(), start, end);
+  function presaleMint(uint256 count) external onlyOwner {
+    _batchMint(pianoKingWhitelist.getWhitelistedAddresses(), count);
   }
 
   /**
    * @dev Generic batch mint
    */
-  function _batchMint(
-    address[] memory addrs,
-    uint256 start,
-    uint256 end
-  ) internal {
+  function _batchMint(address[] memory addrs, uint256 count) internal {
+    // To mint a batch all of its tokens need to have been preminted
+    require(supplyLeft == 0, "Batch not yet sold out");
     // Check that the random number is ready to be used
     require(canUseRandomNumber, "Random number not ready");
+    uint256 end = lastBatchIndex + count;
     // Check that the end is not longer than the addrs array
     require(end <= addrs.length, "Out of bounds");
     (uint256 lowerBound, uint256 upperBound) = getBounds();
-    // Check that the start is right at the end of the previous call
-    require(
-      start + lowerBound == totalSupply,
-      "Cannot skip or overlap addresses"
-    );
     uint256 tokenId = globalRandomNumber;
-    for (uint256 i = start; i < end; i++) {
+    for (uint256 i = lastBatchIndex; i < end; i++) {
       address addr = addrs[i];
       uint256 allowance = getAllowance(addr);
       for (uint256 j = 0; j < allowance; j++) {
@@ -224,17 +217,32 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
       }
       // Update the balance of the address
       _balances[addr] += allowance;
+      // Add the allowance just minted to the total supply
+      totalSupply += allowance;
+      if (lowerBound >= 1000) {
+        // We clear the mapping at this address as it's no longer needed
+        delete preMintAllowance[addr];
+      }
     }
-    // Add the amount that has been minted to the total supply
-    totalSupply += end - start;
     if (end == addrs.length) {
       // We've minted all the tokens of this batch, so this random number
       // cannot be used anymore
       canUseRandomNumber = false;
+      if (lowerBound >= 1000) {
+        // And we can clear the preMintAddresses array to free it for next batch
+        // It's always nice to free unused storage anyway
+        delete preMintAddresses;
+      }
+      // Get the bounds of the next range now that this batch mint is completed
+      (lowerBound, upperBound) = getBounds();
+      // Assign the supply available to premint for the next batch
+      supplyLeft = upperBound - lowerBound;
+      lastBatchIndex = 0;
     } else {
       // Save the token id in the random number variable to continue the sequence
       // on next call
       globalRandomNumber = tokenId;
+      lastBatchIndex = uint16(end);
     }
   }
 
