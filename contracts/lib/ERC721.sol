@@ -15,7 +15,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  * instead of private as we want to access it to reduce fees for batch mints.
  * And since we don't use OpenZeppelin mint functions and they are not part of
  * of the official specification of the ERC721 (EIP-721), we removed them.
- * Same for the burning function as we purposely forbidden burning of a token once
+ * Same for the burning function as we purposely forbid burning of a token once
  * it has been minted.
  * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC721] Non-Fungible Token Standard, including
  * the Metadata extension, but not including the Enumerable extension, which is available separately as

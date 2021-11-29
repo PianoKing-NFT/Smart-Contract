@@ -10,6 +10,15 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @dev The contract of Piano King NFTs.
+ * As minting batch of tokens is a native feature of ERC1155, using
+ * this standard can be discussed. Noting however that ERC1155 is
+ * not yet supported everywhere.
+ * For example Metamask has only a partial support of ERC1155 for now
+ * (they can be viewed but not transfered).
+ * OpenSea does support them however.
+ * Considering Piano King use case it may not be guarranteed that using
+ * ERC1155 will further reduce gas fee. With the ERC1155 we interact with just
+ * one mapping during mint instead of two for ERC721, but it is a nested mapping.
  */
 contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   using Address for address payable;
