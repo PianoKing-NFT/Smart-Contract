@@ -9,17 +9,14 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 /**
- * Some optimizations will be necessary before deploying to production.
- * For now it's just a draft
+ * @dev The contract of Piano King NFTs.
  */
 contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   using Address for address payable;
   uint256 private constant MAX_TOKEN_PER_ADDRESS = 25;
   // The amount in Wei (0.2 ETH by default) required to give this contract to mint an NFT
   // for the 4000 tokens following the 1000 in presale
-  uint256 internal constant MIN_PRICE = 200000000000000000;
-  // The max supply possible is 10,000 tokens
-  uint256 internal constant MAX_SUPPLY = 10000;
+  uint256 public constant MIN_PRICE = 200000000000000000;
   // The current minted supply
   uint256 public totalSupply;
   // TO-DO: replace this url by the base url where the metadata
@@ -33,17 +30,19 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   mapping(address => uint256) internal preApprovedAddress;
 
   // Address => how many tokens this address will receive on the next batch mint
-  mapping(address => uint256) internal preMintAllowance;
+  mapping(address => uint256) public preMintAllowance;
 
   // Addresses that have paid to get a token in the next batch mint
-  address[] internal preMintAddresses;
+  address[] public preMintAddresses;
 
   // The random number used for batch mints
   uint256 internal globalRandomNumber;
-  // Indicate if a random has just been requested
+  // Indicate if a random number has just been requested
   bool internal hasRequestedRandomness;
   // Indicate if the random number is ready to be used
   bool internal canUseRandomNumber;
+  // Allow to keep track of iterations through multiple consecutives
+  // transactions for batch mints
   uint16 internal lastBatchIndex;
 
   PianoKingWhitelist public pianoKingWhitelist;
@@ -73,6 +72,12 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     pianoKingWhitelist = PianoKingWhitelist(_pianoKingWhitelistAddress);
   }
 
+  /**
+   * @dev Let anyone premint a random token as long as they send at least
+   * the min price required to do so
+   * The actual minting will happen later in a batch to reduce the fees
+   * of random number request to off-chain oracles
+   */
   function preMint() external payable {
     // The sender must send at least the min price to mint
     // and acquire the NFT
@@ -87,12 +92,12 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   }
 
   /**
-   * @dev Let anyone mint a random NFT as long as they send at least
-   * the min price required to do so
+   * @dev Premint a token for a given address.
+   * Meant to be used by the Dutch Auction contract or anyone wishing to
+   * offer a token to someone else
    */
   function preMintFor(address addr) public payable {
-    // The presale mint has to be completed before users can call
-    // this function
+    // The presale mint has to be completed before this function can be called
     require(totalSupply >= 1000, "Presale mint not completed");
     bool isDutchAuction = totalSupply >= 5000;
     // After the first phase only the Piano King Dutch Auction contract
@@ -110,7 +115,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
       // the division will be an integer whose value is floored
       // (i.e. 15.9 => 15 and not 16)
       // If this address has been given away some free tokens,
-      // we just get the amount of tokens is allowed to get
+      // we just get the amount of tokens given away
       uint256 preApprovedAllowance = preApprovedAddress[addr];
       amountOfToken = preApprovedAllowance > 0
         ? preApprovedAllowance
@@ -168,6 +173,9 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     hasRequestedRandomness = false;
     // Mark the random number is ready to be used
     canUseRandomNumber = true;
+    // Just to tell us that the random number has been received
+    // No need to broadcast, however making it public is not problematic
+    // and shouldn't since any data on-chain is public (even private variable)
     emit RandomNumberReceived(requestId);
   }
 
@@ -184,8 +192,6 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
 
   /**
    * @dev Mint all the token pre-purchased during the presale
-   * We don't use neither the _mint nor the _safeMint function
-   * to optimize the process as much as possible in terms of gas
    * @param count How many addresses to loop through
    */
   function presaleMint(uint256 count) external onlyOwner {
@@ -194,16 +200,27 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
 
   /**
    * @dev Generic batch mint
+   * We don't use neither the _mint nor the _safeMint function
+   * to optimize the process as much as possible in terms of gas
+   * @param addrs Addresses meant to receive tokens
+   * @param count How many addresses to loop through in this call
    */
   function _batchMint(address[] memory addrs, uint256 count) internal {
     // To mint a batch all of its tokens need to have been preminted
     require(supplyLeft == 0, "Batch not yet sold out");
     // Check that the random number is ready to be used
     require(canUseRandomNumber, "Random number not ready");
+    // Get the ending index from the start index and the number of
+    // addresses to loop through
     uint256 end = lastBatchIndex + count;
     // Check that the end is not longer than the addrs array
     require(end <= addrs.length, "Out of bounds");
+    // Get the bounds of the current phase/slot
     (uint256 lowerBound, uint256 upperBound) = getBounds();
+    // Set the token id to the value of the random number variable
+    // If it's the start, then it will be the random number returned
+    // by Chainlink VRF. If not it will be the last token id generated
+    // in the batch needed to continue the sequence
     uint256 tokenId = globalRandomNumber;
     for (uint256 i = lastBatchIndex; i < end; i++) {
       address addr = addrs[i];
@@ -237,11 +254,13 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
       (lowerBound, upperBound) = getBounds();
       // Assign the supply available to premint for the next batch
       supplyLeft = upperBound - lowerBound;
+      // Set the index back to 0 so that next batch mint can start at the beginning
       lastBatchIndex = 0;
     } else {
       // Save the token id in the random number variable to continue the sequence
       // on next call
       globalRandomNumber = tokenId;
+      // Save the index to set as start of next call
       lastBatchIndex = uint16(end);
     }
   }
@@ -252,7 +271,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
    */
   function getAllowance(address addr) internal view virtual returns (uint256) {
     // If the supply is below a 1000 then we're getting the white list allowance
-    // otherwise it's premint allowance
+    // otherwise it's the premint allowance
     return
       totalSupply < 1000
         ? pianoKingWhitelist.getWhitelistAllowance(addr)
@@ -266,7 +285,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
    * We use the properties of prime numbers to prevent collisions naturally without
    * manual checks that would be expensive since they would require writing the
    * storage or the memory.
-   * @param randomNumber True random number which has been previously provided by an oracle
+   * @param randomNumber True random number which has been previously provided by oracles
    * or previous tokenId that was generated from it. Since we're generating a sequence
    * of numbers defined by recurrence we need the previous number as the base for the next.
    */
@@ -331,10 +350,14 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
       // For the 4000 tokens following the presale
       lowerBound = 1000;
       upperBound = 5000;
-    } else {
+    } else if (totalSupply < 10000) {
       // To get the 500 tokens slots to be distributed by Dutch auctions
       lowerBound = 5000 + ((totalSupply - 5000) / 500) * 500;
       upperBound = lowerBound + 500;
+    } else {
+      // Set both at zero to mark that we reached the end of the max supply
+      lowerBound = 0;
+      upperBound = 0;
     }
   }
 
@@ -397,20 +420,23 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
 
   // The following functions are overrides required by Solidity.
 
+  /**
+   * @dev Override of an OpenZeppelin hook called on before any token transfer
+   */
   function _beforeTokenTransfer(
     address from,
     address to,
     uint256 tokenId
   ) internal override {
-    // We prevent to burn token once they have minted
+    // This will prevent anyone from burning a token if he or she tries
+    // to send it to the zero address
     require(to != address(0), "Burning not allowed");
-    if (from == address(0)) {
-      // If it's from the zero address then it's a mint so we increase the supply
-      totalSupply += 1;
-    }
     super._beforeTokenTransfer(from, to, tokenId);
   }
 
+  /**
+   * @dev Get the URI for a given token
+   */
   function tokenURI(uint256 tokenId)
     public
     view
@@ -425,14 +451,16 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
 
   // View and pure functions
 
+  /**
+   * @dev Get the uri used as a base for all the token metadata
+   */
   function _baseURI() internal view override returns (string memory) {
     return baseURI;
   }
 
-  function getMinPrice() external pure returns (uint256) {
-    return MIN_PRICE;
-  }
-
+  /**
+   * @dev Get the address of the Piano King wallet
+   */
   function getPianoKingWallet() external view returns (address) {
     return pianoKingWallet;
   }

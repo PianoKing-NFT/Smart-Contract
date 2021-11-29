@@ -10,14 +10,7 @@ import {
   MockPianoKing,
   PianoKingDutchAuction,
 } from "../typechain";
-
-function wait(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve("");
-    }, ms);
-  });
-}
+import { wait } from "../utils";
 
 /**
  * Note, most of this tests can only pass on a local hardhat network
@@ -139,7 +132,7 @@ describe("Dutch Auction", function () {
     expect(reservePrice).to.be.equal(ethers.utils.parseEther("1"));
   });
 
-  it("Should fail to initiate an auction if the total supply of tokens minted so is less than 5000", async function () {
+  it("Should fail to initiate an auction if the total supply of tokens minted is less than 5000", async function () {
     // Set the total supply just shy of 5000 but below
     pianoKing.setTotalSupply(4999);
     // We expect the initiation to fail since the first phase is not over
@@ -236,7 +229,7 @@ describe("Dutch Auction", function () {
     await wait(6000);
     // Even if after 6 seconds the price should be down to 0.8 ETH
     // the reserve price kicks in and the sender can only buy at 1 ETH
-    // at least from that point, until the auction expires. So we expect
+    // at least from that point until the auction expires. So we expect
     // the transaction to fail with "Not enough funds" if we try to go for 0.8 ETH
     await expect(
       dutchAuction.connect(buyer).buy({

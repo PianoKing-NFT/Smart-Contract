@@ -48,6 +48,9 @@ const config: HardhatUserConfig = {
     hardhat: {
       // To fix an issue with Metamask
       chainId: 1337,
+      accounts: {
+        count: 400,
+      },
     },
     mainnet: {
       url: process.env.MAINNET_URL || "",

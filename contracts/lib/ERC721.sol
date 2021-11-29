@@ -12,7 +12,11 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 /**
  * We customize the ERC721 model of OpenZeppelin to make the variable internal
- * instead of private as we want to access it to reduce fees for batch mints
+ * instead of private as we want to access it to reduce fees for batch mints.
+ * And since we don't use OpenZeppelin mint functions and they are not part of
+ * of the official specification of the ERC721 (EIP-721), we removed them.
+ * Same for the burning function as we purposely forbidden burning of a token once
+ * it has been minted.
  * @dev Implementation of https://eips.ethereum.org/EIPS/eip-721[ERC721] Non-Fungible Token Standard, including
  * the Metadata extension, but not including the Enumerable extension, which is available separately as
  * {ERC721Enumerable}.
@@ -299,84 +303,6 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     return (spender == owner ||
       getApproved(tokenId) == spender ||
       isApprovedForAll(owner, spender));
-  }
-
-  /**
-   * @dev Safely mints `tokenId` and transfers it to `to`.
-   *
-   * Requirements:
-   *
-   * - `tokenId` must not exist.
-   * - If `to` refers to a smart contract, it must implement {IERC721Receiver-onERC721Received}, which is called upon a safe transfer.
-   *
-   * Emits a {Transfer} event.
-   */
-  function _safeMint(address to, uint256 tokenId) internal virtual {
-    _safeMint(to, tokenId, "");
-  }
-
-  /**
-   * @dev Same as {xref-ERC721-_safeMint-address-uint256-}[`_safeMint`], with an additional `data` parameter which is
-   * forwarded in {IERC721Receiver-onERC721Received} to contract recipients.
-   */
-  function _safeMint(
-    address to,
-    uint256 tokenId,
-    bytes memory _data
-  ) internal virtual {
-    _mint(to, tokenId);
-    require(
-      _checkOnERC721Received(address(0), to, tokenId, _data),
-      "ERC721: transfer to non ERC721Receiver implementer"
-    );
-  }
-
-  /**
-   * @dev Mints `tokenId` and transfers it to `to`.
-   *
-   * WARNING: Usage of this method is discouraged, use {_safeMint} whenever possible
-   *
-   * Requirements:
-   *
-   * - `tokenId` must not exist.
-   * - `to` cannot be the zero address.
-   *
-   * Emits a {Transfer} event.
-   */
-  function _mint(address to, uint256 tokenId) internal virtual {
-    require(to != address(0), "ERC721: mint to the zero address");
-    require(!_exists(tokenId), "ERC721: token already minted");
-
-    _beforeTokenTransfer(address(0), to, tokenId);
-
-    _balances[to] += 1;
-    _owners[tokenId] = to;
-
-    emit Transfer(address(0), to, tokenId);
-  }
-
-  /**
-   * @dev Destroys `tokenId`.
-   * The approval is cleared when the token is burned.
-   *
-   * Requirements:
-   *
-   * - `tokenId` must exist.
-   *
-   * Emits a {Transfer} event.
-   */
-  function _burn(uint256 tokenId) internal virtual {
-    address owner = ERC721.ownerOf(tokenId);
-
-    _beforeTokenTransfer(owner, address(0), tokenId);
-
-    // Clear approvals
-    _approve(address(0), tokenId);
-
-    _balances[owner] -= 1;
-    delete _owners[tokenId];
-
-    emit Transfer(owner, address(0), tokenId);
   }
 
   /**

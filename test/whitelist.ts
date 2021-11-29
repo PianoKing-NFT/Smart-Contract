@@ -77,7 +77,7 @@ describe("Whitelist", function () {
     const tx = await whiteList.connect(buyer).whiteListSender({
       value: ethers.utils.parseEther("1"),
     });
-    tx.wait(1);
+    await tx.wait(1);
     // The buyer sent 1 ETH so 10 NFTs
     expect(await whiteList.getWhitelistAllowance(buyer.address)).to.be.equal(
       10
@@ -97,7 +97,7 @@ describe("Whitelist", function () {
     const tx = await whiteList.connect(buyer).whiteListSender({
       value: ethers.utils.parseEther("2.5"),
     });
-    tx.wait(1);
+    await tx.wait(1);
     // 2.5 ETH => 25 NFTs
     expect(await whiteList.getWhitelistAllowance(buyer.address)).to.be.equal(
       25
@@ -137,7 +137,7 @@ describe("Whitelist", function () {
     const tx = await whiteList.connect(buyer).whiteListSender({
       value: ethers.utils.parseEther("1.59"),
     });
-    tx.wait(1);
+    await tx.wait(1);
     // 1.59 => 15.9 => 15 NFTs (as the number is floored)
     expect(await whiteList.getWhitelistAllowance(buyer.address)).to.be.equal(
       15
@@ -160,7 +160,7 @@ describe("Whitelist", function () {
     const tx = await whiteList.connect(buyer).whiteListSender({
       value: ethers.utils.parseEther("1"),
     });
-    tx.wait(1);
+    await tx.wait(1);
     expect(await whiteList.getWhitelistAllowance(buyer.address)).to.be.equal(
       10
     );
@@ -174,7 +174,7 @@ describe("Whitelist", function () {
     const tx2 = await whiteList.connect(buyer).whiteListSender({
       value: ethers.utils.parseEther("1"),
     });
-    tx2.wait(1);
+    await tx2.wait(1);
     expect(await whiteList.getWhitelistAllowance(buyer.address)).to.be.equal(
       20
     );
@@ -194,7 +194,7 @@ describe("Whitelist", function () {
     const tx = await whiteList.connect(buyer).whiteListSender({
       value: ethers.utils.parseEther("1"),
     });
-    tx.wait(1);
+    await tx.wait(1);
     expect(await whiteList.getWhitelistAllowance(buyer.address)).to.be.equal(
       10
     );
@@ -229,7 +229,7 @@ describe("Whitelist", function () {
     const tx = await whiteList.connect(buyer).whiteListSender({
       value: ethers.utils.parseEther("2"),
     });
-    tx.wait(1);
+    await tx.wait(1);
     // Get the balance of the Piano King Wallet which should be 10,000 ETH
     // the default value of test accounts on hardhat network
     let walletBalance = await ethers.provider.getBalance(
@@ -241,7 +241,7 @@ describe("Whitelist", function () {
     contractBalance = await ethers.provider.getBalance(whiteList.address);
     expect(contractBalance).to.be.equal(ethers.utils.parseEther("2"));
     const withdrawTx = await whiteList.connect(pianoKingWallet).retrieveFunds();
-    withdrawTx.wait(1);
+    await withdrawTx.wait(1);
     // Get the balance of the Piano King Wallet again, which has received
     // the 2 ETH from the contract
     walletBalance = await ethers.provider.getBalance(pianoKingWallet.address);
@@ -266,7 +266,7 @@ describe("Whitelist", function () {
     const setPianoKingWalletTx = await whiteList.setPianoKingWallet(
       newPianoKingWallet.address
     );
-    setPianoKingWalletTx.wait(1);
+    await setPianoKingWalletTx.wait(1);
 
     let contractBalance = await ethers.provider.getBalance(whiteList.address);
     // We expect the contract to have no funds here
@@ -275,7 +275,7 @@ describe("Whitelist", function () {
     const tx = await whiteList.connect(buyer).whiteListSender({
       value: ethers.utils.parseEther("2"),
     });
-    tx.wait(1);
+    await tx.wait(1);
     // Get the balance of the Piano King wallet which should be 10,000 ETH
     // the default value of test accounts on hardhat network
     let walletBalance = await ethers.provider.getBalance(
@@ -289,7 +289,7 @@ describe("Whitelist", function () {
     // Not necessary to use connect as it's already the default account,
     // but let's be completely explicit
     const withdrawTx = await whiteList.connect(deployer).retrieveFunds();
-    withdrawTx.wait(1);
+    await withdrawTx.wait(1);
     // Get the balance of the Piano King wallet again, which has received
     // the 2 ETH from the contract
     walletBalance = await ethers.provider.getBalance(
@@ -314,7 +314,7 @@ describe("Whitelist", function () {
   it("Should not let sender get whitelisted when the sale is not open", async function () {
     // We close the sale
     const closeSaleTx = await whiteList.setSaleStatus(false);
-    closeSaleTx.wait(1);
+    await closeSaleTx.wait(1);
     // We then expect the buyer to fail trying to get whitelisted
     // as the sale is not open
     await expect(
@@ -324,7 +324,7 @@ describe("Whitelist", function () {
     ).to.be.revertedWith("Sale not open");
     // We re-open the sale
     const openSaleTx = await whiteList.setSaleStatus(true);
-    openSaleTx.wait(1);
+    await openSaleTx.wait(1);
     // This time the buyer should be able to get whitelisted
     await expect(
       whiteList.connect(buyer).whiteListSender({
