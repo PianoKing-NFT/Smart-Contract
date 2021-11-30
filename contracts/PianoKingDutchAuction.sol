@@ -9,8 +9,8 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  * Dutch Auction contract for Piano King
  */
 contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
-  // 500 token available for sale per auction
-  uint256 public constant TOKEN_PER_AUCTION = 500;
+  // 200 tokens available for sale per auction
+  uint256 public constant TOKEN_PER_AUCTION = 200;
 
   struct Auction {
     uint256 startingPrice;
@@ -57,8 +57,8 @@ contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
       block.timestamp >= auctions[counter].expiresAt,
       "Auction already in progress"
     );
-    // The Dutch Auction can only happen after the first 5000 tokens have been minted
-    require(pianoKing.totalSupply() >= 5000, "Auction phase not started");
+    // The Dutch Auction can only happen after the first 8000 tokens have been minted
+    require(pianoKing.totalSupply() >= 8000, "Auction phase not started");
     Auction storage auction = auctions[counter++];
     // The auction start right at this block timestamp
     auction.startAt = block.timestamp;

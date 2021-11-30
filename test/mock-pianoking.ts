@@ -90,9 +90,9 @@ describe("Mock Piano King", function () {
     // Set the total supply to 1000 to mimick post presale premint
     const totalSupplyTx = await pianoKing.setTotalSupply(1000);
     await totalSupplyTx.wait(1);
-    // Set the supply left to 4000 to mimick the start of the post presale
+    // Set the supply left to 2200 to mimick the start of the post presale
     // premint
-    const setSupplyTx = await pianoKing.setSupplyLeft(4000);
+    const setSupplyTx = await pianoKing.setSupplyLeft(2200);
     await setSupplyTx.wait(1);
     // Each NFT is 0.2 ETH
     const tx = await pianoKing.connect(buyer).preMint({
@@ -106,19 +106,19 @@ describe("Mock Piano King", function () {
     // The buyer should now own 1 token that will be minted in the next batch
     expect(await pianoKing.preMintAllowance(buyer.address)).to.be.equal(1);
 
-    // We expect the supply left to be 3999 as 1 token has now been purchased
+    // We expect the supply left to be 2199 as 1 token has now been purchased
     // Note that the total supply will be unchanged as it only change during
     // the actual batch mint not premint
-    expect(await pianoKing.supplyLeft()).to.be.equal(3999);
+    expect(await pianoKing.supplyLeft()).to.be.equal(2199);
   });
 
   it("Should premint 25 NFTs directly in phase 1 after presale", async function () {
     // Set the total supply to 1000 to mimick post presale premint
     const totalSupplyTx = await pianoKing.setTotalSupply(1000);
     await totalSupplyTx.wait(1);
-    // Set the supply left to 4000 to mimick the start of the post presale
+    // Set the supply left to 2200 to mimick the start of the post presale
     // premint
-    const setSupplyTx = await pianoKing.setSupplyLeft(4000);
+    const setSupplyTx = await pianoKing.setSupplyLeft(2200);
     await setSupplyTx.wait(1);
     // Each NFT is 0.2 ETH -> so 25 NFT = 5 ETH
     const tx = await pianoKing.connect(buyer).preMint({
@@ -132,19 +132,19 @@ describe("Mock Piano King", function () {
     // The buyer should now own 25 token that will be minted in the next batch
     expect(await pianoKing.preMintAllowance(buyer.address)).to.be.equal(25);
 
-    // We expect the supply left to be 3975 as 25 tokens have now been purchased
+    // We expect the supply left to be 2175 as 25 tokens have now been purchased
     // Note that the total supply will be unchanged as it only change during
     // the actual batch mint not premint
-    expect(await pianoKing.supplyLeft()).to.be.equal(3975);
+    expect(await pianoKing.supplyLeft()).to.be.equal(2175);
   });
 
   it("Should be able to premint twice directly in phase 1 after presale", async function () {
     // Set the total supply to 1000 to mimick post presale premint
     const totalSupplyTx = await pianoKing.setTotalSupply(1000);
     await totalSupplyTx.wait(1);
-    // Set the supply left to 4000 to mimick the start of the post presale
+    // Set the supply left to 2200 to mimick the start of the post presale
     // premint
-    const setSupplyTx = await pianoKing.setSupplyLeft(4000);
+    const setSupplyTx = await pianoKing.setSupplyLeft(2200);
     await setSupplyTx.wait(1);
     // Each NFT is 0.2 ETH -> so 10 NFT = 2 ETH
     const tx = await pianoKing.connect(buyer).preMint({
@@ -158,10 +158,10 @@ describe("Mock Piano King", function () {
     // The buyer should now own 10 tokens that will be minted in the next batch
     expect(await pianoKing.preMintAllowance(buyer.address)).to.be.equal(10);
 
-    // We expect the supply left to be 3990 as 10 tokens have now been purchased
+    // We expect the supply left to be 2190 as 10 tokens have now been purchased
     // Note that the total supply will be unchanged as it only change during
     // the actual batch mint not premint
-    expect(await pianoKing.supplyLeft()).to.be.equal(3990);
+    expect(await pianoKing.supplyLeft()).to.be.equal(2190);
 
     // Each NFT is 0.2 ETH -> so 15 NFT = 3 ETH
     const tx2 = await pianoKing.connect(buyer).preMint({
@@ -175,19 +175,19 @@ describe("Mock Piano King", function () {
     // The buyer should now own 25 token that will be minted in the next batch
     expect(await pianoKing.preMintAllowance(buyer.address)).to.be.equal(25);
 
-    // We expect the supply left to be 3975 as 25 tokens have now been purchased in total
+    // We expect the supply left to be 2175 as 25 tokens have now been purchased in total
     // Note that the total supply will be unchanged as it only change during
     // the actual batch mint not premint
-    expect(await pianoKing.supplyLeft()).to.be.equal(3975);
+    expect(await pianoKing.supplyLeft()).to.be.equal(2175);
   });
 
   it("Should let sender premint 1 NFT directly for someone else in phase 1 after presale", async function () {
     // Set the total supply to 1000 to mimick post presale premint
     const totalSupplyTx = await pianoKing.setTotalSupply(1000);
     await totalSupplyTx.wait(1);
-    // Set the supply left to 4000 to mimick the start of the post presale
+    // Set the supply left to 2200 to mimick the start of the post presale
     // premint
-    const setSupplyTx = await pianoKing.setSupplyLeft(4000);
+    const setSupplyTx = await pianoKing.setSupplyLeft(2200);
     await setSupplyTx.wait(1);
 
     const accounts = await ethers.getSigners();
@@ -215,10 +215,10 @@ describe("Mock Piano King", function () {
     // to give to someone else
     expect(await pianoKing.preMintAllowance(buyer.address)).to.be.equal(0);
 
-    // We expect the supply left to be 3999 as 1 token has now been purchased
+    // We expect the supply left to be 2199 as 1 token has now been purchased
     // Note that the total supply will be unchanged as it only change during
     // the actual batch mint not premint
-    expect(await pianoKing.supplyLeft()).to.be.equal(3999);
+    expect(await pianoKing.supplyLeft()).to.be.equal(2199);
   });
 
   it("Should fail to premint more than 25 NFT directly in phase 1", async function () {
@@ -227,7 +227,7 @@ describe("Mock Piano King", function () {
     await totalSupplyTx.wait(1);
     // Set the supply left to 4000 to mimick the start of the post presale
     // premint
-    const setSupplyTx = await pianoKing.setSupplyLeft(4000);
+    const setSupplyTx = await pianoKing.setSupplyLeft(2200);
     await setSupplyTx.wait(1);
     // The sender might expect to get 26 NFTs out of this transaction
     // but the limit is 25 NFTs per address so it will fail
@@ -238,13 +238,13 @@ describe("Mock Piano King", function () {
     ).to.be.revertedWith("Above maximum");
   });
 
-  it("Should fail to premint twice if the second transaction go above 25 NFT for that address in phase 1", async function () {
+  it("Should fail to premint twice if the second transaction go above 25 NFTs for that address in phase 1", async function () {
     // Set the total supply to 1000 to mimick post presale premint
     const totalSupplyTx = await pianoKing.setTotalSupply(1000);
     await totalSupplyTx.wait(1);
-    // Set the supply left to 4000 to mimick the start of the post presale
+    // Set the supply left to 2200 to mimick the start of the post presale
     // premint
-    const setSupplyTx = await pianoKing.setSupplyLeft(4000);
+    const setSupplyTx = await pianoKing.setSupplyLeft(2200);
     await setSupplyTx.wait(1);
     // Each NFT is 0.2 ETH -> so 20 NFT = 4 ETH
     const tx = await pianoKing.connect(buyer).preMint({
@@ -287,11 +287,11 @@ describe("Mock Piano King", function () {
   });
 
   it("Should fail to premint an NFT directly in phase 2", async function () {
-    // Set the total supply to 5000 to initiate phase 2 where
+    // Set the total supply to 8000 to initiate phase 2 where
     // token can only be minted through the Dutch Auction
-    const totalSupplyTx = await pianoKing.setTotalSupply(5000);
+    const totalSupplyTx = await pianoKing.setTotalSupply(8000);
     await totalSupplyTx.wait(1);
-    // We expect it to fail since the total supply is 5000, the phase 2
+    // We expect it to fail since the total supply is 8000, the phase 2
     // is on and only Dutch Auction contract can mint
     await expect(
       pianoKing.connect(buyer).preMint({
@@ -301,13 +301,13 @@ describe("Mock Piano King", function () {
   });
 
   it("Should premint an NFT after purchase through auction in the first slot of phase 2", async function () {
-    // Set the total supply to 5000 to initiate phase 2 where
+    // Set the total supply to 8000 to initiate phase 2 where
     // token can only be minted through the Dutch Auction
-    const totalSupplyTx = await pianoKing.setTotalSupply(5000);
+    const totalSupplyTx = await pianoKing.setTotalSupply(8000);
     await totalSupplyTx.wait(1);
     // This would be set at the end of each batch mint but we're skipping that here
     // as it's tested in the batch mint tests down anyaway
-    const setSupplyTx = await pianoKing.setSupplyLeft(500);
+    const setSupplyTx = await pianoKing.setSupplyLeft(200);
     await setSupplyTx.wait(1);
     // Initiate a dutch auction of 60 seconds
     const tx = await dutchAuction.initiateAuction(
@@ -331,7 +331,7 @@ describe("Mock Piano King", function () {
       reservePrice,
     ] = await dutchAuction.auctions(0);
     // One token has been given to the sender
-    expect(tokensLeft).to.be.equal(499);
+    expect(tokensLeft).to.be.equal(199);
     // We expect to see the buyer address as the first in the array of addresses
     // which preminted a token
     expect(await pianoKing.preMintAddresses(0)).to.be.equal(buyer.address);
@@ -340,12 +340,12 @@ describe("Mock Piano King", function () {
   });
 
   it("Should mint a random NFT after purchase through auction in the last slot of phase 2", async function () {
-    // We set the total supply to 9500 to initiate the last slot of phase 2
-    const supplyTx = await pianoKing.setTotalSupply(9500);
+    // We set the total supply to 9800 to initiate the last slot of phase 2
+    const supplyTx = await pianoKing.setTotalSupply(9800);
     await supplyTx.wait(1);
     // This would be set at the end of each batch mint but we're skipping that here
     // as it's tested in the batch mint tests down anyaway
-    const setSupplyTx = await pianoKing.setSupplyLeft(500);
+    const setSupplyTx = await pianoKing.setSupplyLeft(200);
     await setSupplyTx.wait(1);
     // Initiate a dutch auction of 60 seconds
     const tx = await dutchAuction.initiateAuction(
@@ -369,7 +369,7 @@ describe("Mock Piano King", function () {
       reservePrice,
     ] = await dutchAuction.auctions(0);
     // One token has been given to the sender
-    expect(tokensLeft).to.be.equal(499);
+    expect(tokensLeft).to.be.equal(199);
     // We expect to see the buyer address as the first in the array of addresses
     // which preminted a token
     expect(await pianoKing.preMintAddresses(0)).to.be.equal(buyer.address);
@@ -439,13 +439,13 @@ describe("Mock Piano King", function () {
 
     // At the end of the batch mint, we expect the supply left
     // to be 4000 as it gets ready for the next batch
-    expect(await pianoKing.supplyLeft()).to.be.equal(4000);
+    expect(await pianoKing.supplyLeft()).to.be.equal(2200);
     // The total supply should be 1000 since all the presale tokens are now minted
     expect(await pianoKing.totalSupply()).to.be.equal(1000);
   });
 
-  it("Should do a batch mint of the next 4000 tokens (i.e. 4000 tokens after presale)", async function () {
-    // Set the total supply to 1000 to mimick the batch mint of the 4000 tokens
+  it("Should do a batch mint of the next 2200 tokens (i.e. 2200 tokens after presale)", async function () {
+    // Set the total supply to 1000 to mimick the batch mint of the 2200 tokens
     // following the presale mint
     const supplyTx = await pianoKing.setTotalSupply(1000);
     await supplyTx.wait(1);
@@ -454,9 +454,9 @@ describe("Mock Piano King", function () {
     expect(await pianoKing.totalSupply()).to.be.equal(1000);
 
     const addresses = [];
-    // Generate 1000 addresses as the mock contract returns a fake allowance of 4
-    // for each address, so 4000 tokens in total
-    for (let i = 0; i < 1000; i++) {
+    // Generate 550 addresses as the mock contract returns a fake allowance of 4
+    // for each address, so 2200 tokens in total
+    for (let i = 0; i < 550; i++) {
       addresses.push(ethers.utils.hexZeroPad(ethers.utils.hexlify(i), 20));
     }
 
@@ -483,9 +483,9 @@ describe("Mock Piano King", function () {
       INITIAL_LINK_BALANCE - LINK_FEE
     );
 
-    // Execute the batch mint in 8 separated calls
-    for (let i = 0; i < 8; i++) {
-      const tx = await pianoKing.doBatchMint(addresses, 125);
+    // Execute the batch mint in 5 separated calls
+    for (let i = 0; i < 5; i++) {
+      const tx = await pianoKing.doBatchMint(addresses, 110);
       await tx.wait(1);
     }
 
@@ -493,37 +493,236 @@ describe("Mock Piano King", function () {
     const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
     const mintEvents = await pianoKing.queryFilter(mintFilter);
     // There should have been 4000 mints in total
-    expect(mintEvents.length).to.be.equal(4000);
+    expect(mintEvents.length).to.be.equal(2200);
     // Get all the token ids
     const tokenIds = mintEvents.map((x) => x.args.tokenId.toNumber());
     for (const tokenId of tokenIds) {
-      // Each token id should be between 1001 and 5000 (inclusive)
-      expect(tokenId).to.be.lessThanOrEqual(5000).greaterThan(1000);
+      // Each token id should be between 1001 and 3200 (inclusive)
+      expect(tokenId).to.be.lessThanOrEqual(3200).greaterThan(1000);
     }
     // Since a Set cannot have duplicates we check here that
     // all the token ids generated are unique
     expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
 
-    // There should 5000 tokens in supply now
-    expect(await pianoKing.totalSupply()).to.be.equal(5000);
-    // After this batch mint, the first 5000 tokens should be minted,
-    // so the next batch will be 500 tokens (through a Dutch Auction)
-    expect(await pianoKing.supplyLeft()).to.be.equal(500);
+    // There should 3200 tokens in supply now
+    expect(await pianoKing.totalSupply()).to.be.equal(3200);
+    // After this batch mint, the first 3200 tokens should be minted,
+    // so the next batch will be 1600 tokens
+    expect(await pianoKing.supplyLeft()).to.be.equal(1600);
   });
 
-  it("Should do a batch mint of 500 tokens for the first slot of phase 2", async function () {
-    // Set the total supply to 5000 to mimick the batch mint of 500 tokens
+  it("Should do a batch mint of the first 1600 tokens batch", async function () {
+    // Set the total supply to 3200 to mimick the batch mint of
+    // the first batch of 1600 tokens
+    const supplyTx = await pianoKing.setTotalSupply(3200);
+    await supplyTx.wait(1);
+
+    // The total supply should now be 3200
+    expect(await pianoKing.totalSupply()).to.be.equal(3200);
+
+    const addresses = [];
+    // Generate 400 addresses as the mock contract returns a fake allowance of 4
+    // for each address, so 1600 tokens in total
+    for (let i = 0; i < 400; i++) {
+      addresses.push(ethers.utils.hexZeroPad(ethers.utils.hexlify(i), 20));
+    }
+
+    // Request a random number to Chainlink VRF
+    const randomnessTx = await pianoKing.requestBatchRN();
+    await randomnessTx.wait(1);
+
+    // We get the request id of the randomness request from the events
+    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+      requestRandomnessFilter
+    );
+    const requestId = requestRandomnessEvent.args.requestId;
+
+    // Mock a response from Chainlink oracles
+    const vrfTx = await vrfCoordinator.callBackWithRandomness(
+      requestId,
+      getRandomNumber(),
+      pianoKing.address
+    );
+    await vrfTx.wait(1);
+    // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE - LINK_FEE
+    );
+
+    // Execute the batch mint in 4 separated calls
+    for (let i = 0; i < 4; i++) {
+      const tx = await pianoKing.doBatchMint(addresses, 100);
+      await tx.wait(1);
+    }
+
+    // From the zero address means it's a mint
+    const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
+    const mintEvents = await pianoKing.queryFilter(mintFilter);
+    // There should have been 1600 mints in total
+    expect(mintEvents.length).to.be.equal(1600);
+    // Get all the token ids
+    const tokenIds = mintEvents.map((x) => x.args.tokenId.toNumber());
+    for (const tokenId of tokenIds) {
+      // Each token id should be between 3201 and 4800 (inclusive)
+      expect(tokenId).to.be.lessThanOrEqual(4800).greaterThan(3200);
+    }
+    // Since a Set cannot have duplicates we check here that
+    // all the token ids generated are unique
+    expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
+
+    // There should 3200 tokens in supply now
+    expect(await pianoKing.totalSupply()).to.be.equal(4800);
+    // After this batch mint, it will be the second batch of 1600 tokens
+    expect(await pianoKing.supplyLeft()).to.be.equal(1600);
+  });
+
+  it("Should do a batch mint of the second 1600 tokens batch", async function () {
+    // Set the total supply to 4800 to mimick the batch mint of
+    // the second batch of 1600 tokens
+    const supplyTx = await pianoKing.setTotalSupply(4800);
+    await supplyTx.wait(1);
+
+    // The total supply should now be 4800
+    expect(await pianoKing.totalSupply()).to.be.equal(4800);
+
+    const addresses = [];
+    // Generate 400 addresses as the mock contract returns a fake allowance of 4
+    // for each address, so 1600 tokens in total
+    for (let i = 0; i < 400; i++) {
+      addresses.push(ethers.utils.hexZeroPad(ethers.utils.hexlify(i), 20));
+    }
+
+    // Request a random number to Chainlink VRF
+    const randomnessTx = await pianoKing.requestBatchRN();
+    await randomnessTx.wait(1);
+
+    // We get the request id of the randomness request from the events
+    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+      requestRandomnessFilter
+    );
+    const requestId = requestRandomnessEvent.args.requestId;
+
+    // Mock a response from Chainlink oracles
+    const vrfTx = await vrfCoordinator.callBackWithRandomness(
+      requestId,
+      getRandomNumber(),
+      pianoKing.address
+    );
+    await vrfTx.wait(1);
+    // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE - LINK_FEE
+    );
+
+    // Execute the batch mint in 4 separated calls
+    for (let i = 0; i < 4; i++) {
+      const tx = await pianoKing.doBatchMint(addresses, 100);
+      await tx.wait(1);
+    }
+
+    // From the zero address means it's a mint
+    const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
+    const mintEvents = await pianoKing.queryFilter(mintFilter);
+    // There should have been 1600 mints in total
+    expect(mintEvents.length).to.be.equal(1600);
+    // Get all the token ids
+    const tokenIds = mintEvents.map((x) => x.args.tokenId.toNumber());
+    for (const tokenId of tokenIds) {
+      // Each token id should be between 4801 and 6400 (inclusive)
+      expect(tokenId).to.be.lessThanOrEqual(6400).greaterThan(4800);
+    }
+    // Since a Set cannot have duplicates we check here that
+    // all the token ids generated are unique
+    expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
+
+    // There should 6400 tokens in supply now
+    expect(await pianoKing.totalSupply()).to.be.equal(6400);
+    // After this batch mint, it will be the last batch of 1600 tokens
+    expect(await pianoKing.supplyLeft()).to.be.equal(1600);
+  });
+
+  it("Should do a batch mint of the last 1600 tokens batch", async function () {
+    // Set the total supply to 6400 to mimick the batch mint of
+    // the last batch of 1600 tokens
+    const supplyTx = await pianoKing.setTotalSupply(6400);
+    await supplyTx.wait(1);
+
+    // The total supply should now be 6400
+    expect(await pianoKing.totalSupply()).to.be.equal(6400);
+
+    const addresses = [];
+    // Generate 400 addresses as the mock contract returns a fake allowance of 4
+    // for each address, so 1600 tokens in total
+    for (let i = 0; i < 400; i++) {
+      addresses.push(ethers.utils.hexZeroPad(ethers.utils.hexlify(i), 20));
+    }
+
+    // Request a random number to Chainlink VRF
+    const randomnessTx = await pianoKing.requestBatchRN();
+    await randomnessTx.wait(1);
+
+    // We get the request id of the randomness request from the events
+    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+      requestRandomnessFilter
+    );
+    const requestId = requestRandomnessEvent.args.requestId;
+
+    // Mock a response from Chainlink oracles
+    const vrfTx = await vrfCoordinator.callBackWithRandomness(
+      requestId,
+      getRandomNumber(),
+      pianoKing.address
+    );
+    await vrfTx.wait(1);
+    // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE - LINK_FEE
+    );
+
+    // Execute the batch mint in 4 separated calls
+    for (let i = 0; i < 4; i++) {
+      const tx = await pianoKing.doBatchMint(addresses, 100);
+      await tx.wait(1);
+    }
+
+    // From the zero address means it's a mint
+    const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
+    const mintEvents = await pianoKing.queryFilter(mintFilter);
+    // There should have been 1600 mints in total
+    expect(mintEvents.length).to.be.equal(1600);
+    // Get all the token ids
+    const tokenIds = mintEvents.map((x) => x.args.tokenId.toNumber());
+    for (const tokenId of tokenIds) {
+      // Each token id should be between 6401 and 8000 (inclusive)
+      expect(tokenId).to.be.lessThanOrEqual(8000).greaterThan(6400);
+    }
+    // Since a Set cannot have duplicates we check here that
+    // all the token ids generated are unique
+    expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
+
+    // There should 8000 tokens in supply now
+    expect(await pianoKing.totalSupply()).to.be.equal(8000);
+    // After this batch mint, we'll pass to phase 2 (dutch auctions)
+    // so the next batch will contain 200 tokens
+    expect(await pianoKing.supplyLeft()).to.be.equal(200);
+  });
+
+  it("Should do a batch mint of 200 tokens for the first slot of phase 2", async function () {
+    // Set the total supply to 8000 to mimick the batch mint of 200 tokens
     // in the first slot of phase 2
-    const supplyTx = await pianoKing.setTotalSupply(5000);
+    const supplyTx = await pianoKing.setTotalSupply(8000);
     await supplyTx.wait(1);
 
-    // The total supply should now be 5000
-    expect(await pianoKing.totalSupply()).to.be.equal(5000);
+    // The total supply should now be 8000
+    expect(await pianoKing.totalSupply()).to.be.equal(8000);
 
     const addresses = [];
-    // Generate 125 addresses as the mock contract returns a fake allowance of 4
-    // for each address, so 500 tokens in total
-    for (let i = 0; i < 125; i++) {
+    // Generate 50 addresses as the mock contract returns a fake allowance of 4
+    // for each address, so 200 tokens in total
+    for (let i = 0; i < 50; i++) {
       addresses.push(ethers.utils.hexZeroPad(ethers.utils.hexlify(i), 20));
     }
 
@@ -551,43 +750,43 @@ describe("Mock Piano King", function () {
     );
 
     // Execute the batch mint in a single transaction
-    const tx = await pianoKing.doBatchMint(addresses, 125);
+    const tx = await pianoKing.doBatchMint(addresses, 50);
     await tx.wait(1);
 
     // From the zero address means it's a mint
     const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
     const mintEvents = await pianoKing.queryFilter(mintFilter);
-    // There should have been 500 mints in total
-    expect(mintEvents.length).to.be.equal(500);
+    // There should have been 200 mints in total
+    expect(mintEvents.length).to.be.equal(200);
     // Get all the ids of the token minted in this batch
     const tokenIds = mintEvents.map((x) => x.args.tokenId.toNumber());
     for (const tokenId of tokenIds) {
-      // This batch should contain id between 5001 and 5500 (inclusive)
-      expect(tokenId).to.be.lessThanOrEqual(5500).greaterThan(5000);
+      // This batch should contain id between 8001 and 8200 (inclusive)
+      expect(tokenId).to.be.lessThanOrEqual(8200).greaterThan(8000);
     }
     // Since a Set cannot have duplicates we check here that
     // all the token ids generated are unique
     expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
 
-    // The next batch is another Dutch Auction so 500
-    expect(await pianoKing.supplyLeft()).to.be.equal(500);
-    // The total supply should now be 5500
-    expect(await pianoKing.totalSupply()).to.be.equal(5500);
+    // The next batch is another Dutch Auction so 200
+    expect(await pianoKing.supplyLeft()).to.be.equal(200);
+    // The total supply should now be 8200
+    expect(await pianoKing.totalSupply()).to.be.equal(8200);
   });
 
-  it("Should do a batch mint of 500 tokens for the last slot of phase 2", async function () {
-    // Set the total supply to 9500 to mimick the batch mint of 500 tokens
+  it("Should do a batch mint of 200 tokens for the last slot of phase 2", async function () {
+    // Set the total supply to 9800 to mimick the batch mint of 200 tokens
     // in the last slot of phase 2
-    const supplyTx = await pianoKing.setTotalSupply(9500);
+    const supplyTx = await pianoKing.setTotalSupply(9800);
     await supplyTx.wait(1);
 
-    // The total supply should 9500
-    expect(await pianoKing.totalSupply()).to.be.equal(9500);
+    // The total supply should 9800
+    expect(await pianoKing.totalSupply()).to.be.equal(9800);
 
     const addresses = [];
-    // Generate 125 addresses as the mock contract returns a fake allowance of 4
-    // for each address, so 500 tokens in total
-    for (let i = 0; i < 125; i++) {
+    // Generate 50 addresses as the mock contract returns a fake allowance of 4
+    // for each address, so 200 tokens in total
+    for (let i = 0; i < 50; i++) {
       addresses.push(ethers.utils.hexZeroPad(ethers.utils.hexlify(i), 20));
     }
 
@@ -615,19 +814,19 @@ describe("Mock Piano King", function () {
     );
 
     // Execute the batch mint in a single transaction
-    const tx = await pianoKing.doBatchMint(addresses, 125);
+    const tx = await pianoKing.doBatchMint(addresses, 50);
     await tx.wait(1);
 
     // From the zero address means it's a mint
     const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
     const mintEvents = await pianoKing.queryFilter(mintFilter);
     // There should have been 500 mints in total
-    expect(mintEvents.length).to.be.equal(500);
+    expect(mintEvents.length).to.be.equal(200);
     // Get all the ids of the token minted in this batch
     const tokenIds = mintEvents.map((x) => x.args.tokenId.toNumber());
     for (const tokenId of tokenIds) {
-      // This batch should contain token with ids between 9501 and 10000 (the last token)
-      expect(tokenId).to.be.lessThanOrEqual(10000).greaterThan(9500);
+      // This batch should contain token with ids between 9801 and 10000 (the last token)
+      expect(tokenId).to.be.lessThanOrEqual(10000).greaterThan(9800);
     }
     // Since a Set cannot have duplicates we check here that
     // all the token ids generated are unique

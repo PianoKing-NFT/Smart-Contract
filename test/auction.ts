@@ -58,7 +58,7 @@ describe("Dutch Auction", function () {
 
     // Deploy a mock version of Piano King contract which let us modify
     // the total supply, which is necessary as the Dutch auction is only allowed
-    // after the first 5000 have been distributed
+    // after the first 8000 have been distributed
     const PianoKingFactory = await ethers.getContractFactory("MockPianoKing");
     pianoKing = await PianoKingFactory.deploy(
       whiteList.address,
@@ -71,7 +71,7 @@ describe("Dutch Auction", function () {
     );
     await pianoKing.deployed();
 
-    const totalSupplyTx = await pianoKing.setTotalSupply(5000);
+    const totalSupplyTx = await pianoKing.setTotalSupply(8000);
     await totalSupplyTx.wait(1);
 
     const DutchAuction = await ethers.getContractFactory(
@@ -86,7 +86,7 @@ describe("Dutch Auction", function () {
     );
     await setAuctionAddrTx.wait(1);
 
-    const setSupplyLeftTx = await pianoKing.setSupplyLeft(500);
+    const setSupplyLeftTx = await pianoKing.setSupplyLeft(200);
     await setSupplyLeftTx.wait(1);
 
     // The LINK have been given to the deployer of the contract
@@ -127,16 +127,16 @@ describe("Dutch Auction", function () {
     // And expires at the block timestamp plus the 5 seconds defined as the duration
     expect(expiresAt).to.be.equal(block.timestamp + 5);
     expect(priceDeductionRate).to.be.equal(ethers.utils.parseEther("0.1"));
-    // The amount of tokens always start at 500
-    expect(tokensLeft).to.be.equal(500);
+    // The amount of tokens always start at 200
+    expect(tokensLeft).to.be.equal(200);
     expect(reservePrice).to.be.equal(ethers.utils.parseEther("1"));
   });
 
-  it("Should fail to initiate an auction if the total supply of tokens minted is less than 5000", async function () {
-    // Set the total supply just shy of 5000 but below
-    pianoKing.setTotalSupply(4999);
+  it("Should fail to initiate an auction if the total supply of tokens minted is less than 8000", async function () {
+    // Set the total supply just shy of 8000 but below
+    pianoKing.setTotalSupply(7999);
     // We expect the initiation to fail since the first phase is not over
-    // as all the first 5000 tokens have to be sold first
+    // as all the first 8000 tokens have to be sold first
     await expect(
       dutchAuction.initiateAuction(
         5,
@@ -174,7 +174,7 @@ describe("Dutch Auction", function () {
       reservePrice,
     ] = await dutchAuction.auctions(0);
     // One token has been given to the sender
-    expect(tokensLeft).to.be.equal(499);
+    expect(tokensLeft).to.be.equal(199);
   });
 
   it("Should not let sender buy if price doesn't match", async function () {

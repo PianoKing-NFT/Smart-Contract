@@ -110,7 +110,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   function preMintFor(address addr) public payable {
     // The presale mint has to be completed before this function can be called
     require(totalSupply >= 1000, "Presale mint not completed");
-    bool isDutchAuction = totalSupply >= 5000;
+    bool isDutchAuction = totalSupply >= 8000;
     // After the first phase only the Piano King Dutch Auction contract
     // can mint
     if (isDutchAuction) {
@@ -179,16 +179,21 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     internal
     override
   {
-    // Get the first 16 bytes (equivalent to a uint128) into randomSeed
+    // Put the first 16 bytes (equivalent to a uint128) into randomSeed
     randomSeed = uint128(
       randomNumber &
         0xffffffffffffffffffffffffffffffff00000000000000000000000000000000
     );
-    // Get the last 16 bytes (equivalent to a uint128) into randomIncrementor
+    // Put the last 16 bytes (equivalent to a uint128) into randomIncrementor
     randomIncrementor = uint128(
       randomNumber &
         0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
     );
+    // We're making sure the random incrementor is high enough and most
+    // importantly not zero
+    if (randomIncrementor < 10000) {
+      randomIncrementor += 10000;
+    }
     // Allow to trigger a new randomness request
     hasRequestedRandomness = false;
     // Mark the random number is ready to be used
@@ -311,6 +316,9 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
    * @param randomNumber True random number which has been previously provided by oracles
    * or previous tokenId that was generated from it. Since we're generating a sequence
    * of numbers defined by recurrence we need the previous number as the base for the next.
+   * @param lowerBound Lower bound of current batch
+   * @param upperBound Upper bound of current batch
+   * @param incrementor Random incrementor based on the random number provided by oracles
    */
   function generateTokenId(
     uint256 randomNumber,
@@ -327,21 +335,28 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
         tokenId = ((tokenId + incrementor) % 1009) + 1;
       }
     } else if (lowerBound == 1000) {
-      // A lower bound of 1000 indicates it's post-presale batch of 4000
-      // tokens with ids between 1001 and 5000 (inclusive)
-      tokenId = lowerBound + ((randomNumber + incrementor) % 4001) + 1;
+      // A lower bound of 1000 indicates it's the first post-presale batch of 2200
+      // tokens with ids between 1001 and 2200 (inclusive)
+      tokenId = lowerBound + ((randomNumber + incrementor) % 2203) + 1;
       // Shouldn't trigger too many iterations
       while (tokenId > upperBound) {
-        tokenId = lowerBound + ((tokenId + incrementor) % 4001) + 1;
+        tokenId = lowerBound + ((tokenId + incrementor) % 2203) + 1;
+      }
+    } else if (lowerBound < 8000) {
+      // If the lower bound is above 1000 but below 8000 it indicates it's one of the
+      // next post-presale batch of 1600 tokens
+      tokenId = lowerBound + ((randomNumber + incrementor) % 1601) + 1;
+      // Shouldn't trigger too many iterations
+      while (tokenId > upperBound) {
+        tokenId = lowerBound + ((tokenId + incrementor) % 1601) + 1;
       }
     } else {
-      // If the lower bound is above a 1000 (and actually 5000 and above)
-      // then its the phase 2 in which we are minting in batch 500 tokens
-      // paid for during the Dutch Auction
-      tokenId = lowerBound + ((randomNumber + incrementor) % 503) + 1;
+      // If the lower bound is above a 8000 then its the phase 2 in which
+      // we are minting in batch 200 tokens paid for during the Dutch Auction
+      tokenId = lowerBound + ((randomNumber + incrementor) % 211) + 1;
       // Shouldn't trigger too many iterations
       while (tokenId > upperBound) {
-        tokenId = lowerBound + ((tokenId + incrementor) % 503) + 1;
+        tokenId = lowerBound + ((tokenId + incrementor) % 211) + 1;
       }
     }
   }
@@ -367,14 +382,27 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
       // For the presale
       lowerBound = 0;
       upperBound = 1000;
-    } else if (totalSupply < 5000) {
-      // For the 4000 tokens following the presale
+    } else if (totalSupply < 3200) {
+      // For the 2200 tokens following the presale
       lowerBound = 1000;
-      upperBound = 5000;
+      upperBound = 3200;
+    } else if (totalSupply < 4800) {
+      // For first batch of 1600 tokens following the presale and previous
+      // 2200 token
+      lowerBound = 3200;
+      upperBound = 4800;
+    } else if (totalSupply < 6400) {
+      // For second batch of 1600 tokens following the presale
+      lowerBound = 4800;
+      upperBound = 6400;
+    } else if (totalSupply < 8000) {
+      // For third batch of 1600 tokens following the presale
+      lowerBound = 6400;
+      upperBound = 8000;
     } else if (totalSupply < 10000) {
-      // To get the 500 tokens slots to be distributed by Dutch auctions
-      lowerBound = 5000 + ((totalSupply - 5000) / 500) * 500;
-      upperBound = lowerBound + 500;
+      // To get the 200 tokens slots to be distributed by Dutch auctions
+      lowerBound = 8000 + ((totalSupply - 8000) / 200) * 200;
+      upperBound = lowerBound + 200;
     } else {
       // Set both at zero to mark that we reached the end of the max supply
       lowerBound = 0;
