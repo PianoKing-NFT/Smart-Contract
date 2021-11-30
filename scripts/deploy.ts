@@ -21,18 +21,6 @@ async function main() {
    * Idea for deployment: Listen to gas price with Etherscan API and trigger
    * the deployment of the contracts at a less expensive time
    */
-  let tokenId = 1000 + (42 % 4001) + 1;
-  const ids = [];
-  for (let i = 0; i < 4000; i++) {
-    tokenId = 1000 + ((tokenId + 3209) % 4001) + 1;
-    if (tokenId > 5000) {
-      tokenId = 1000 + ((tokenId + 3209) % 4001) + 1;
-    }
-    ids.push(tokenId);
-  }
-  console.log(ids.slice(3900));
-  console.log(ids.length);
-  console.log(new Set(ids).size);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

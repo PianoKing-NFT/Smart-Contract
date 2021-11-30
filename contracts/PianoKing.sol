@@ -44,8 +44,10 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   // Addresses that have paid to get a token in the next batch mint
   address[] public preMintAddresses;
 
-  // The random number used for batch mints
-  uint256 internal globalRandomNumber;
+  // The random number used as a seed for the random sequence for batch mint
+  uint128 internal randomSeed;
+  // The random number used as the base for the incrementor in the sequence
+  uint128 internal randomIncrementor;
   // Indicate if a random number has just been requested
   bool internal hasRequestedRandomness;
   // Indicate if the random number is ready to be used
@@ -177,7 +179,16 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     internal
     override
   {
-    globalRandomNumber = randomNumber;
+    // Get the first 16 bytes (equivalent to a uint128) into randomSeed
+    randomSeed = uint128(
+      randomNumber &
+        0xffffffffffffffffffffffffffffffff00000000000000000000000000000000
+    );
+    // Get the last 16 bytes (equivalent to a uint128) into randomIncrementor
+    randomIncrementor = uint128(
+      randomNumber &
+        0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
+    );
     // Allow to trigger a new randomness request
     hasRequestedRandomness = false;
     // Mark the random number is ready to be used
@@ -230,14 +241,15 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     // If it's the start, then it will be the random number returned
     // by Chainlink VRF. If not it will be the last token id generated
     // in the batch needed to continue the sequence
-    uint256 tokenId = globalRandomNumber;
+    uint256 tokenId = randomSeed;
+    uint256 incrementor = randomIncrementor;
     for (uint256 i = lastBatchIndex; i < end; i++) {
       address addr = addrs[i];
       uint256 allowance = getAllowance(addr);
       for (uint256 j = 0; j < allowance; j++) {
         // Generate a number from the random number for the given
         // address and this given token to be
-        tokenId = generateTokenId(tokenId, lowerBound, upperBound);
+        tokenId = generateTokenId(tokenId, lowerBound, upperBound, incrementor);
         _owners[tokenId] = addr;
         emit Transfer(address(0), addr, tokenId);
       }
@@ -268,7 +280,9 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     } else {
       // Save the token id in the random number variable to continue the sequence
       // on next call
-      globalRandomNumber = tokenId;
+      // The token id is between 1 and 10000, so no worries on this side,
+      // it can even fit in a uint16
+      randomSeed = uint128(tokenId);
       // Save the index to set as start of next call
       lastBatchIndex = uint16(end);
     }
@@ -301,35 +315,33 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   function generateTokenId(
     uint256 randomNumber,
     uint256 lowerBound,
-    uint256 upperBound
+    uint256 upperBound,
+    uint256 incrementor
   ) internal pure returns (uint256 tokenId) {
     // A lower bound of 0 indicate it's the presale batch mint with ids
     // between 1 and 1000 (inclusive)
     if (lowerBound == 0) {
-      tokenId = ((randomNumber + 739) % 1009) + 1;
-      // We don't need a loop as if the number is between 1000 and 1009,
-      // we are guarranteed the next one will not
-      if (tokenId > upperBound) {
-        tokenId = ((tokenId + 739) % 1009) + 1;
+      tokenId = ((randomNumber + incrementor) % 1009) + 1;
+      // Shouldn't trigger too many iterations
+      while (tokenId > upperBound) {
+        tokenId = ((tokenId + incrementor) % 1009) + 1;
       }
     } else if (lowerBound == 1000) {
       // A lower bound of 1000 indicates it's post-presale batch of 4000
       // tokens with ids between 1001 and 5000 (inclusive)
-      tokenId = lowerBound + ((randomNumber + 3209) % 4001) + 1;
-      // We don't need a loop as if the number is 5001,
-      // we are guarranteed the next one will not
-      if (tokenId > upperBound) {
-        tokenId = lowerBound + ((tokenId + 3209) % 4001) + 1;
+      tokenId = lowerBound + ((randomNumber + incrementor) % 4001) + 1;
+      // Shouldn't trigger too many iterations
+      while (tokenId > upperBound) {
+        tokenId = lowerBound + ((tokenId + incrementor) % 4001) + 1;
       }
     } else {
       // If the lower bound is above a 1000 (and actually 5000 and above)
       // then its the phase 2 in which we are minting in batch 500 tokens
       // paid for during the Dutch Auction
-      tokenId = lowerBound + ((randomNumber + 367) % 503) + 1;
-      // We don't need a loop as if the number is between 500 and 503,
-      // we are guarranteed the next one will not
-      if (tokenId > upperBound) {
-        tokenId = lowerBound + ((tokenId + 367) % 503) + 1;
+      tokenId = lowerBound + ((randomNumber + incrementor) % 503) + 1;
+      // Shouldn't trigger too many iterations
+      while (tokenId > upperBound) {
+        tokenId = lowerBound + ((tokenId + incrementor) % 503) + 1;
       }
     }
   }
