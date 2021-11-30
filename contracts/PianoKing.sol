@@ -77,7 +77,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     address _linkToken,
     bytes32 _keyhash,
     uint256 _fee
-  ) VRFConsumerBase(_vrfCoordinator, _linkToken) ERC721("PianoKing", "PK") {
+  ) VRFConsumerBase(_vrfCoordinator, _linkToken) ERC721("Piano King", "PK") {
     keyhash = _keyhash;
     fee = _fee;
     pianoKingWhitelist = PianoKingWhitelist(_pianoKingWhitelistAddress);
@@ -386,19 +386,11 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
       // For the 2200 tokens following the presale
       lowerBound = 1000;
       upperBound = 3200;
-    } else if (totalSupply < 4800) {
-      // For first batch of 1600 tokens following the presale and previous
-      // 2200 token
-      lowerBound = 3200;
-      upperBound = 4800;
-    } else if (totalSupply < 6400) {
-      // For second batch of 1600 tokens following the presale
-      lowerBound = 4800;
-      upperBound = 6400;
     } else if (totalSupply < 8000) {
-      // For third batch of 1600 tokens following the presale
-      lowerBound = 6400;
-      upperBound = 8000;
+      // For the batches of 1600 tokens following the presale and previous
+      // 2200 tokens
+      lowerBound = 3200 + ((totalSupply - 3200) / 1600) * 1600;
+      upperBound = lowerBound + 1600;
     } else if (totalSupply < 10000) {
       // To get the 200 tokens slots to be distributed by Dutch auctions
       lowerBound = 8000 + ((totalSupply - 8000) / 200) * 200;
