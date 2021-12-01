@@ -390,8 +390,6 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     if (incrementor % modulo == modulo - 1) {
       incrementor += 1;
     }
-    // If the lower bound is above 1000 but below 8000 it indicates it's one of the
-    // next post-presale batch of 1600 tokens
     tokenId = lowerBound + ((randomNumber + incrementor) % modulo) + 1;
     // Shouldn't trigger too many iterations
     while (tokenId > upperBound) {
@@ -401,13 +399,6 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
 
   /**
    * @dev Get the bounds of the range to generate the ids in
-   * The first phase contains the first 5000 ids which is for the presale
-   * and the following 4000. The first phase contains 25 legendary and 150
-   * heroic
-   * The second phase is the next 5000 divided each in 500 distributed in
-   * Dutch auctions. Each slot of 500 contains 2 legendary and 15 heroic.
-   * If someone wish to verify these data, he or she can do so by consulting
-   * the metadata of the tokens yet to be minted
    * @param lowerBound The starting position from which the tokenId will be randomly picked
    * @param upperBound The ending position until which the tokenId will be randomly picked
    */
