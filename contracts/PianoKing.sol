@@ -387,7 +387,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     // so we need to add 1 to it. Letting such failure happen would not be
     // fatal for the flow of minting other tokens but would be costly for us
     // in terms of gas
-    if (incrementor % modulo == modulo - 1) {
+    if (incrementor % modulo == modulo - 1 - (lowerBound % modulo)) {
       incrementor += 1;
     }
     tokenId = lowerBound + ((randomNumber + incrementor) % modulo) + 1;
