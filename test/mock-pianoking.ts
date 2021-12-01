@@ -909,4 +909,117 @@ describe("Mock Piano King", function () {
     // There should be 10000 tokens in total now, everything has been minted
     expect(await pianoKing.totalSupply()).to.be.equal(10000);
   });
+
+  it("Should be able to withraw the funds as Piano King Wallet", async function () {
+    const supplyTx = await pianoKing.setTotalSupply(1000);
+    await supplyTx.wait(1);
+
+    const supplyLeftTx = await pianoKing.setSupplyLeft(2200);
+    await supplyLeftTx.wait(1);
+
+    const accounts = await ethers.getSigners();
+    // Get a new address to set a new Piano King wallet
+    const newPianoKingWallet = accounts[8];
+    const setPianoKingWalletTx = await pianoKing.setPianoKingWallet(
+      newPianoKingWallet.address
+    );
+    await setPianoKingWalletTx.wait(1);
+
+    let contractBalance = await ethers.provider.getBalance(pianoKing.address);
+    // We expect the contract to have no funds here
+    expect(contractBalance).to.be.equal(0);
+    // A buyer deposit 2 ETH
+    const tx = await pianoKing.connect(buyer).preMint({
+      value: ethers.utils.parseEther("2"),
+    });
+    await tx.wait(1);
+    // Get the balance of the Piano King Wallet which should be 10,000 ETH
+    // the default value of test accounts on hardhat network
+    let walletBalance = await ethers.provider.getBalance(
+      newPianoKingWallet.address
+    );
+    expect(walletBalance).to.be.equal(ethers.utils.parseEther("10000"));
+
+    // The contract should now hold the 2 ETH
+    contractBalance = await ethers.provider.getBalance(pianoKing.address);
+    expect(contractBalance).to.be.equal(ethers.utils.parseEther("2"));
+    const withdrawTx = await pianoKing
+      .connect(newPianoKingWallet)
+      .retrieveFunds();
+    await withdrawTx.wait(1);
+    // Get the balance of the Piano King Wallet again, which has received
+    // the 2 ETH from the contract
+    walletBalance = await ethers.provider.getBalance(
+      newPianoKingWallet.address
+    );
+    // We expect slightly less than 10002 ETH since we also paid some
+    // gas fee in the transaction
+    expect(walletBalance).to.be.closeTo(
+      ethers.utils.parseEther("10002"),
+      // Small enough for Javascript number
+      ethers.utils.parseEther("0.001").toNumber()
+    );
+    // The funds have been withdrawn so now the contract should not
+    // have any ETH
+    contractBalance = await ethers.provider.getBalance(pianoKing.address);
+    expect(contractBalance).to.be.equal(0);
+  });
+
+  it("Should be able to withraw the funds as owner", async function () {
+    const supplyTx = await pianoKing.setTotalSupply(1000);
+    await supplyTx.wait(1);
+
+    const supplyLeftTx = await pianoKing.setSupplyLeft(2200);
+    await supplyLeftTx.wait(1);
+
+    const accounts = await ethers.getSigners();
+    // Get a new address to set a new Piano King wallet
+    const newPianoKingWallet = accounts[9];
+    const setPianoKingWalletTx = await pianoKing.setPianoKingWallet(
+      newPianoKingWallet.address
+    );
+    await setPianoKingWalletTx.wait(1);
+
+    let contractBalance = await ethers.provider.getBalance(pianoKing.address);
+    // We expect the contract to have no funds here
+    expect(contractBalance).to.be.equal(0);
+    // A buyer deposit 2 ETH
+    const tx = await pianoKing.connect(buyer).preMint({
+      value: ethers.utils.parseEther("2"),
+    });
+    await tx.wait(1);
+    // Get the balance of the Piano King wallet which should be 10,000 ETH
+    // the default value of test accounts on hardhat network
+    let walletBalance = await ethers.provider.getBalance(
+      newPianoKingWallet.address
+    );
+    expect(walletBalance).to.be.equal(ethers.utils.parseEther("10000"));
+
+    // The contract should now hold the 2 ETH
+    contractBalance = await ethers.provider.getBalance(pianoKing.address);
+    expect(contractBalance).to.be.equal(ethers.utils.parseEther("2"));
+    // Not necessary to use connect as it's already the default account,
+    // but let's be completely explicit
+    const withdrawTx = await pianoKing.connect(deployer).retrieveFunds();
+    await withdrawTx.wait(1);
+    // Get the balance of the Piano King wallet again, which has received
+    // the 2 ETH from the contract
+    walletBalance = await ethers.provider.getBalance(
+      newPianoKingWallet.address
+    );
+    // We expect exactly 10002 ETH since the fees have been paid by the owner
+    expect(walletBalance).to.be.equal(ethers.utils.parseEther("10002"));
+    // The funds have been withdrawn so now the contract should not
+    // have any ETH
+    contractBalance = await ethers.provider.getBalance(pianoKing.address);
+    expect(contractBalance).to.be.equal(0);
+  });
+
+  it("Should not be able to withraw the funds as unauthorized sender", async function () {
+    // The buyer is not authorized to withdraw the funds so we expect the transaction
+    // to be rejected
+    await expect(pianoKing.connect(buyer).retrieveFunds()).to.be.revertedWith(
+      "Not allowed"
+    );
+  });
 });

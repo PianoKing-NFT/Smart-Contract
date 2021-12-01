@@ -268,4 +268,28 @@ describe("Piano King", function () {
     // all the token ids generated are unique
     expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
   });
+
+  it("Should withdraw LINK from the contract", async () => {
+    // Get how many LINK the contract owner initially has
+    const initialDeployerBalance = await linkToken.balanceOf(deployer.address);
+
+    // Should have all its LINK for now
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE
+    );
+
+    const tx = await pianoKing.withdrawLinkTokens(
+      ethers.utils.parseEther("10")
+    );
+    await tx.wait(1);
+
+    // 10 LINK should have been deducted from the contract balance
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE.sub(ethers.utils.parseEther("10"))
+    );
+    // And the owner of the contract should now own the withdrawn LINK
+    expect(await linkToken.balanceOf(deployer.address)).to.be.equal(
+      initialDeployerBalance.add(ethers.utils.parseEther("10"))
+    );
+  });
 });
