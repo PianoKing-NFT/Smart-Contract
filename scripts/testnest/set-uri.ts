@@ -13,14 +13,21 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
   // We get the contract to deploy
-  /* const Whitelist = await ethers.getContractFactory("PianoKingWhitelist");
-  const whiteList = await Whitelist.deploy();
-  await whiteList.deployed();
-  console.log("Whitelist deployed to:", whiteList.address); */
   /**
    * Idea for deployment: Listen to gas price with Etherscan API and trigger
    * the deployment of the contracts at a less expensive time
    */
+
+  const pianoKing = await ethers.getContractAt(
+    "MockPianoKing",
+    process.env.PIANO_KING as string
+  );
+
+  /* const setURITx = await pianoKing.setBaseURI(
+    "https://gateway.pinata.cloud/ipfs/QmPYV2ibmTkSHjag913wrQRLSZCAb8juPWnuTsmwaLabwN/"
+  );
+  await setURITx.wait(1); */
+  console.log(await pianoKing.tokenURI(2));
 }
 
 // We recommend this pattern to be able to use async/await everywhere

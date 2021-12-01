@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./PianoKingWhitelist.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @dev The contract of Piano King NFTs.
@@ -22,6 +23,8 @@ import "@openzeppelin/contracts/utils/Address.sol";
  */
 contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   using Address for address payable;
+  using Strings for uint256;
+
   uint256 private constant MAX_TOKEN_PER_ADDRESS = 25;
   // The amount in Wei (0.2 ETH by default) required to give this contract to mint an NFT
   // for the 4000 tokens following the 1000 in presale
@@ -329,12 +332,22 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     // A lower bound of 0 indicate it's the presale batch mint with ids
     // between 1 and 1000 (inclusive)
     if (lowerBound == 0) {
+      // Special case in which the incrementor would be equivalent to 0
+      // so we need to add 1 to it
+      if (incrementor % 1009 == 1008) {
+        incrementor += 1;
+      }
       tokenId = ((randomNumber + incrementor) % 1009) + 1;
       // Shouldn't trigger too many iterations
       while (tokenId > upperBound) {
         tokenId = ((tokenId + incrementor) % 1009) + 1;
       }
     } else if (lowerBound == 1000) {
+      // Special case in which the incrementor would be equivalent to 0
+      // so we need to add 1 to it
+      if (incrementor % 2203 == 2202) {
+        incrementor += 1;
+      }
       // A lower bound of 1000 indicates it's the first post-presale batch of 2200
       // tokens with ids between 1001 and 2200 (inclusive)
       tokenId = lowerBound + ((randomNumber + incrementor) % 2203) + 1;
@@ -343,6 +356,11 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
         tokenId = lowerBound + ((tokenId + incrementor) % 2203) + 1;
       }
     } else if (lowerBound < 8000) {
+      // Special case in which the incrementor would be equivalent to 0
+      // so we need to add 1 to it
+      if (incrementor % 1601 == 1600) {
+        incrementor += 1;
+      }
       // If the lower bound is above 1000 but below 8000 it indicates it's one of the
       // next post-presale batch of 1600 tokens
       tokenId = lowerBound + ((randomNumber + incrementor) % 1601) + 1;
@@ -351,6 +369,11 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
         tokenId = lowerBound + ((tokenId + incrementor) % 1601) + 1;
       }
     } else {
+      // Special case in which the incrementor would be equivalent to 0
+      // so we need to add 1 to it
+      if (incrementor % 211 == 210) {
+        incrementor += 1;
+      }
       // If the lower bound is above a 8000 then its the phase 2 in which
       // we are minting in batch 200 tokens paid for during the Dutch Auction
       tokenId = lowerBound + ((randomNumber + incrementor) % 211) + 1;
@@ -487,7 +510,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     require(_exists(tokenId), "URI query for nonexistent token");
     // Concatenate the baseURI and the tokenId as the tokenId should
     // just be appended at the end to access the token metadata
-    return string(abi.encodePacked(_baseURI(), tokenId));
+    return string(abi.encodePacked(_baseURI(), tokenId.toString(), ".json"));
   }
 
   // View and pure functions

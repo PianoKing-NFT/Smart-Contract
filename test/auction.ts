@@ -25,8 +25,8 @@ describe("Dutch Auction", function () {
   let deployer: SignerWithAddress;
   let buyer: SignerWithAddress;
   let pianoKingWallet: SignerWithAddress;
-  const INITIAL_LINK_BALANCE = 20000;
-  const LINK_FEE = 2;
+  const INITIAL_LINK_BALANCE = ethers.utils.parseEther("20000");
+  const LINK_FEE = ethers.utils.parseEther("2");
   // let walletBalance: BigNumber;
   beforeEach(async () => {
     // Get the local accounts

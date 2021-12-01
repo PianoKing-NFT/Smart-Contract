@@ -17,8 +17,8 @@ describe("Piano King", function () {
   let deployer: SignerWithAddress;
   let buyer: SignerWithAddress;
   let pianoKingWallet: SignerWithAddress;
-  const INITIAL_LINK_BALANCE = 20000;
-  const LINK_FEE = 2;
+  const INITIAL_LINK_BALANCE = ethers.utils.parseEther("20000");
+  const LINK_FEE = ethers.utils.parseEther("2");
   // let walletBalance: BigNumber;
   beforeEach(async () => {
     // Get the local accounts
@@ -159,7 +159,7 @@ describe("Piano King", function () {
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
     expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
-      INITIAL_LINK_BALANCE - LINK_FEE
+      INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
     const tx = await pianoKing.presaleMint(200);

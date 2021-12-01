@@ -21,8 +21,8 @@ describe("Mock Piano King", function () {
   let deployer: SignerWithAddress;
   let buyer: SignerWithAddress;
   let pianoKingWallet: SignerWithAddress;
-  const INITIAL_LINK_BALANCE = 20000;
-  const LINK_FEE = 2;
+  const INITIAL_LINK_BALANCE = ethers.utils.parseEther("20000");
+  const LINK_FEE = ethers.utils.parseEther("2");
   // let walletBalance: BigNumber;
   beforeEach(async () => {
     // Get the local accounts
@@ -413,7 +413,79 @@ describe("Mock Piano King", function () {
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
     expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
-      INITIAL_LINK_BALANCE - LINK_FEE
+      INITIAL_LINK_BALANCE.sub(LINK_FEE)
+    );
+
+    // Execute the batch mint in 2 separate calls
+    const tx = await pianoKing.doBatchMint(addresses, 125);
+    await tx.wait(1);
+    const tx2 = await pianoKing.doBatchMint(addresses, 125);
+    await tx2.wait(1);
+
+    // From the zero address means it's a mint
+    const mintFilter = pianoKing.filters.Transfer(ethers.constants.AddressZero);
+    const mintEvents = await pianoKing.queryFilter(mintFilter);
+    // There should be a 1000 tokens minted in total
+    expect(mintEvents.length).to.be.equal(1000);
+    // Get all the token ids generated
+    const tokenIds = mintEvents.map((x) => x.args.tokenId.toNumber());
+    for (const tokenId of tokenIds) {
+      // Each token id range between 1 and 1000 (inclusive)
+      expect(tokenId).to.be.lessThanOrEqual(1000).greaterThan(0);
+    }
+    // Since a Set cannot have duplicates we check here that
+    // all the token ids generated are unique
+    expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
+
+    // At the end of the batch mint, we expect the supply left
+    // to be 4000 as it gets ready for the next batch
+    expect(await pianoKing.supplyLeft()).to.be.equal(2200);
+    // The total supply should be 1000 since all the presale tokens are now minted
+    expect(await pianoKing.totalSupply()).to.be.equal(1000);
+  });
+
+  it("Should do a batch mint with a random number which will yield an incrementor equivalent to 0", async function () {
+    // Set the supply to 0 in order to mimick a presale batch mint
+    const supplyTx = await pianoKing.setTotalSupply(0);
+    await supplyTx.wait(1);
+
+    expect(await pianoKing.supplyLeft()).to.be.equal(0);
+    expect(await pianoKing.totalSupply()).to.be.equal(0);
+
+    const addresses = [];
+    // Generate 250 addresses as the mock contract returns a fake allowance of 4
+    // for each address, so 1000 tokens in total
+    for (let i = 0; i < 250; i++) {
+      // An address is encoded as 20 bytes hexadecimal string
+      addresses.push(ethers.utils.hexZeroPad(ethers.utils.hexlify(i), 20));
+    }
+
+    // Request a random number to use as seed for the batch
+    const randomnessTx = await pianoKing.requestBatchRN();
+    await randomnessTx.wait(1);
+
+    // We get the request id of the randomness request from the events
+    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+      requestRandomnessFilter
+    );
+    const requestId = requestRandomnessEvent.args.requestId;
+
+    // Initiate a mock response of the VRF to our contract
+    const vrfTx = await vrfCoordinator.callBackWithRandomness(
+      requestId,
+      // Since it's the batch of the first 1000 tokens the modulo used
+      // with the incrementor will be 1009 and 10089 modulo 1009 = 1008
+      // which with the plus 1 we add to the token id is equivalent to
+      // 0. We handle this special case and the ids should still be all
+      // unique
+      10089,
+      pianoKing.address
+    );
+    await vrfTx.wait(1);
+    // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
+    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+      INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
     // Execute the batch mint in 2 separate calls
@@ -480,7 +552,7 @@ describe("Mock Piano King", function () {
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
     expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
-      INITIAL_LINK_BALANCE - LINK_FEE
+      INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
     // Execute the batch mint in 5 separated calls
@@ -547,7 +619,7 @@ describe("Mock Piano King", function () {
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
     expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
-      INITIAL_LINK_BALANCE - LINK_FEE
+      INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
     // Execute the batch mint in 4 separated calls
@@ -613,7 +685,7 @@ describe("Mock Piano King", function () {
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
     expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
-      INITIAL_LINK_BALANCE - LINK_FEE
+      INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
     // Execute the batch mint in 4 separated calls
@@ -679,7 +751,7 @@ describe("Mock Piano King", function () {
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
     expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
-      INITIAL_LINK_BALANCE - LINK_FEE
+      INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
     // Execute the batch mint in 4 separated calls
@@ -746,7 +818,7 @@ describe("Mock Piano King", function () {
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
     expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
-      INITIAL_LINK_BALANCE - LINK_FEE
+      INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
     // Execute the batch mint in a single transaction
@@ -810,7 +882,7 @@ describe("Mock Piano King", function () {
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
     expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
-      INITIAL_LINK_BALANCE - LINK_FEE
+      INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
     // Execute the batch mint in a single transaction

@@ -21,11 +21,11 @@ contract MockPianoKing is PianoKing {
     )
   {}
 
-  function setTotalSupply(uint256 supply) external {
+  function setTotalSupply(uint256 supply) external onlyOwner {
     totalSupply = supply;
   }
 
-  function setSupplyLeft(uint256 supply) external {
+  function setSupplyLeft(uint256 supply) external onlyOwner {
     supplyLeft = supply;
   }
 
