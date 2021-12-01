@@ -33,7 +33,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   uint256 public totalSupply;
   // TO-DO: replace this url by the base url where the metadata
   // of each token will be stored.
-  string internal baseURI = "https://example.com/";
+  string private baseURI = "https://example.com/";
   // The supply left before next batch mint
   // Start at 0 as there is no premint for presale
   uint256 public supplyLeft = 0;
@@ -61,11 +61,11 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
 
   PianoKingWhitelist public pianoKingWhitelist;
   // Address authorized to withdraw the funds
-  address public pianoKingWallet = 0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586;
+  address internal pianoKingWallet = 0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586;
 
   // Doesn't have to be defined straight away, can be defined later
   // at least before phase 2
-  address public pianoKingDutchAuction;
+  address internal pianoKingDutchAuction;
 
   // Data for chainlink
   bytes32 internal keyhash;
@@ -108,7 +108,10 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   /**
    * @dev Premint a token for a given address.
    * Meant to be used by the Dutch Auction contract or anyone wishing to
-   * offer a token to someone else
+   * offer a token to someone else or simply paying the gas fee for that person
+   * Improvement propsals:
+   * - Disable smart contract from calling this function by detecting if the sender
+   * has any code (but it could still be called from the constructor of a smart contract)
    */
   function preMintFor(address addr) public payable {
     // The presale mint has to be completed before this function can be called
@@ -153,6 +156,11 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
 
     // Remove the newly acquired tokens from the supply left before next batch mint
     supplyLeft -= amountOfToken;
+
+    // Making sure the pre approved allowance can't be used twice
+    if (preApprovedAddress[addr] > 0) {
+      delete preApprovedAddress[addr];
+    }
   }
 
   /**
@@ -329,58 +337,65 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     uint256 upperBound,
     uint256 incrementor
   ) internal pure returns (uint256 tokenId) {
-    // A lower bound of 0 indicate it's the presale batch mint with ids
-    // between 1 and 1000 (inclusive)
     if (lowerBound == 0) {
-      // Special case in which the incrementor would be equivalent to 0
-      // so we need to add 1 to it
-      if (incrementor % 1009 == 1008) {
-        incrementor += 1;
-      }
-      tokenId = ((randomNumber + incrementor) % 1009) + 1;
-      // Shouldn't trigger too many iterations
-      while (tokenId > upperBound) {
-        tokenId = ((tokenId + incrementor) % 1009) + 1;
-      }
+      // Presale mint (1000 tokens)
+      tokenId = getTokenIdInRange(
+        randomNumber,
+        1009,
+        incrementor,
+        lowerBound,
+        upperBound
+      );
     } else if (lowerBound == 1000) {
-      // Special case in which the incrementor would be equivalent to 0
-      // so we need to add 1 to it
-      if (incrementor % 2203 == 2202) {
-        incrementor += 1;
-      }
-      // A lower bound of 1000 indicates it's the first post-presale batch of 2200
-      // tokens with ids between 1001 and 2200 (inclusive)
-      tokenId = lowerBound + ((randomNumber + incrementor) % 2203) + 1;
-      // Shouldn't trigger too many iterations
-      while (tokenId > upperBound) {
-        tokenId = lowerBound + ((tokenId + incrementor) % 2203) + 1;
-      }
+      // Post pre-sale mint of 2200 tokens
+      tokenId = getTokenIdInRange(
+        randomNumber,
+        2203,
+        incrementor,
+        lowerBound,
+        upperBound
+      );
     } else if (lowerBound < 8000) {
-      // Special case in which the incrementor would be equivalent to 0
-      // so we need to add 1 to it
-      if (incrementor % 1601 == 1600) {
-        incrementor += 1;
-      }
-      // If the lower bound is above 1000 but below 8000 it indicates it's one of the
-      // next post-presale batch of 1600 tokens
-      tokenId = lowerBound + ((randomNumber + incrementor) % 1601) + 1;
-      // Shouldn't trigger too many iterations
-      while (tokenId > upperBound) {
-        tokenId = lowerBound + ((tokenId + incrementor) % 1601) + 1;
-      }
+      // Second post pre-sale mints of 1600 tokens
+      tokenId = getTokenIdInRange(
+        randomNumber,
+        1601,
+        incrementor,
+        lowerBound,
+        upperBound
+      );
     } else {
-      // Special case in which the incrementor would be equivalent to 0
-      // so we need to add 1 to it
-      if (incrementor % 211 == 210) {
-        incrementor += 1;
-      }
-      // If the lower bound is above a 8000 then its the phase 2 in which
-      // we are minting in batch 200 tokens paid for during the Dutch Auction
-      tokenId = lowerBound + ((randomNumber + incrementor) % 211) + 1;
-      // Shouldn't trigger too many iterations
-      while (tokenId > upperBound) {
-        tokenId = lowerBound + ((tokenId + incrementor) % 211) + 1;
-      }
+      // Dutch auction mints of 200 tokens
+      tokenId = getTokenIdInRange(
+        randomNumber,
+        211,
+        incrementor,
+        lowerBound,
+        upperBound
+      );
+    }
+  }
+
+  function getTokenIdInRange(
+    uint256 randomNumber,
+    uint256 modulo,
+    uint256 incrementor,
+    uint256 lowerBound,
+    uint256 upperBound
+  ) internal pure returns (uint256 tokenId) {
+    // Special case in which the incrementor would be equivalent to 0
+    // so we need to add 1 to it. Letting such failure happen would not be
+    // fatal for the flow of minting other tokens but would be costly for us
+    // in terms of gas
+    if (incrementor % modulo == modulo - 1) {
+      incrementor += 1;
+    }
+    // If the lower bound is above 1000 but below 8000 it indicates it's one of the
+    // next post-presale batch of 1600 tokens
+    tokenId = lowerBound + ((randomNumber + incrementor) % modulo) + 1;
+    // Shouldn't trigger too many iterations
+    while (tokenId > upperBound) {
+      tokenId = lowerBound + ((tokenId + incrementor) % modulo) + 1;
     }
   }
 
@@ -441,11 +456,23 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     pianoKingWhitelist = PianoKingWhitelist(addr);
   }
 
+  /**
+   * @dev Set the address of the contract authorized to do Dutch Auction
+   * of the tokens of this contract
+   */
   function setDutchAuction(address addr) external onlyOwner {
     require(addr != address(0), "Invalid address");
     pianoKingDutchAuction = addr;
   }
 
+  /**
+   * @dev Set the base URI of every token URI
+   * Improvement proposal:
+   * - This setter is here as a fallback in case a mistake is made
+   * while setting the base URI or one of the metadata. But in an optimal
+   * case preventing its edition would be better to assure the immutability
+   * of the data representing the NFTs
+   */
   function setBaseURI(string memory uri) external onlyOwner {
     baseURI = uri;
   }
@@ -459,6 +486,18 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   ) external onlyOwner {
     for (uint256 i = 0; i < addrs.length; i++) {
       preApprovedAddress[addrs[i]] = amounts[i];
+    }
+  }
+
+  /**
+   * @dev Remove addresses that can premint an NFT without paying
+   */
+  function removePreApprovedAddresses(address[] calldata addrs)
+    external
+    onlyOwner
+  {
+    for (uint256 i = 0; i < addrs.length; i++) {
+      delete preApprovedAddress[addrs[i]];
     }
   }
 
@@ -510,17 +549,10 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     require(_exists(tokenId), "URI query for nonexistent token");
     // Concatenate the baseURI and the tokenId as the tokenId should
     // just be appended at the end to access the token metadata
-    return string(abi.encodePacked(_baseURI(), tokenId.toString(), ".json"));
+    return string(abi.encodePacked(baseURI, tokenId.toString(), ".json"));
   }
 
   // View and pure functions
-
-  /**
-   * @dev Get the uri used as a base for all the token metadata
-   */
-  function _baseURI() internal view override returns (string memory) {
-    return baseURI;
-  }
 
   /**
    * @dev Get the address of the Piano King wallet

@@ -104,6 +104,95 @@ describe("Piano King", function () {
     ).to.be.revertedWith("Presale mint not completed");
   });
 
+  /* it("Should set the piano king wallet address", async () => {
+    // The address should be the one defined before in the beforeEach hook
+    expect(await pianoKing.pianoKingWallet()).to.be.equal(
+      "0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586"
+    );
+    const accounts = await ethers.getSigners();
+
+    // Get an address to set the Piano King wallet to
+    const newPianoKingWallet = accounts[9];
+    // Set the new Piano King wallet address
+    const tx = await pianoKing.setPianoKingWallet(newPianoKingWallet.address);
+    await tx.wait(1);
+
+    // Check that the address was changed correctly
+    expect(await pianoKing.pianoKingWallet()).to.be.equal(
+      newPianoKingWallet.address
+    );
+  }); */
+
+  it("Should set the white list address", async () => {
+    // The address should be the one defined before in the beforeEach hook
+    expect(await pianoKing.pianoKingWhitelist()).to.be.equal(whiteList.address);
+    const accounts = await ethers.getSigners();
+
+    // Get an address to set the White List to
+    const newPianoKingWhitelist = accounts[9];
+    // Set the new Piano King wallet address
+    const tx = await pianoKing.setWhitelist(newPianoKingWhitelist.address);
+    await tx.wait(1);
+
+    // Check that the address was changed correctly
+    expect(await pianoKing.pianoKingWhitelist()).to.be.equal(
+      newPianoKingWhitelist.address
+    );
+  });
+
+  /* it("Should set the Dutch Auction address", async () => {
+    // The address should be the zero address as it wasn't defined before
+    expect(await pianoKing.pianoKingDutchAuction()).to.be.equal(
+      ethers.constants.AddressZero
+    );
+    const accounts = await ethers.getSigners();
+
+    // Get an address to set the Dutch Auction to
+    const dutchAuctionAddress = accounts[9];
+    // Set the new Dutch Auction address
+    const tx = await pianoKing.setDutchAuction(dutchAuctionAddress.address);
+    await tx.wait(1);
+
+    // Check that the address was changed correctly
+    expect(await pianoKing.pianoKingDutchAuction()).to.be.equal(
+      dutchAuctionAddress.address
+    );
+  });
+
+  it("Should add 2 addresses as pre-approved addresses", async () => {
+    // Get the two addresses to add
+    const accounts = await ethers.getSigners();
+    const address1 = accounts[5];
+    const address2 = accounts[6];
+
+    // For now these addresses should not have any pre approved allowance
+    expect(await pianoKing.preApprovedAddress(address1.address)).to.be.equal(0);
+    expect(await pianoKing.preApprovedAddress(address2.address)).to.be.equal(0);
+
+    const tx = await pianoKing.addPreApprovedAddresses(
+      [address1.address, address2.address],
+      // The first address will have a pre-approved allowance of 2 and
+      // the second a pre-approved allowance of 4
+      [2, 4]
+    );
+    await tx.wait(1);
+
+    // Check that the allowance have been set properly
+    expect(await pianoKing.preApprovedAddress(address1.address)).to.be.equal(2);
+    expect(await pianoKing.preApprovedAddress(address2.address)).to.be.equal(4);
+  }); 
+
+  it("Should set the base uri properly", async () => {
+    // It should be equal to the default value
+    expect(await pianoKing.baseURI()).to.be.equal("https://example.com/");
+
+    const tx = await pianoKing.setBaseURI("ipfs://ersddsdfefwerwr/");
+    await tx.wait(1);
+
+    // The default URI should have been changed to the new one
+    expect(await pianoKing.baseURI()).to.be.equal("ipfs://ersddsdfefwerwr/");
+  }); */
+
   it("Should mint and distribute the tokens bought during the presale", async function () {
     const accounts = await ethers.getSigners();
     // Mimick the distribution of the actual presale (383 addresses)
@@ -177,7 +266,6 @@ describe("Piano King", function () {
     }
     // Since a Set cannot have duplicates we check here that
     // all the token ids generated are unique
-    // console.log(mintEvents.map((x) => x.args.tokenId.toNumber()).slice(0, 50));
     expect(tokenIds).to.be.lengthOf(new Set(tokenIds).size);
   });
 });
