@@ -454,15 +454,14 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
       address addr = addrs[i];
       require(addr != address(0), "Invalid address");
       uint256 amount = amounts[i];
+      require(amount > 0, "Amount too low");
       require(
         amount + preMintAllowance[addr] <= MAX_TOKEN_PER_ADDRESS,
         "Above maximum"
       );
-
-      if (preMintAllowance[addr] == 0 && amount > 0) {
+      if (preMintAllowance[addr] == 0) {
         preMintAddresses.push(addr);
       }
-      // Can technically set amount to 0, so that address will be skipped
       preMintAllowance[addr] = amount;
     }
   }
