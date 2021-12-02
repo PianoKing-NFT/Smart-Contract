@@ -38,9 +38,6 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   // Start at 0 as there is no premint for presale
   uint256 public supplyLeft = 0;
 
-  // Address => how many free tokens this address can mint
-  mapping(address => uint256) internal preApprovedAddress;
-
   // Address => how many tokens this address will receive on the next batch mint
   mapping(address => uint256) public preMintAllowance;
 
@@ -95,13 +92,6 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   function preMint() external payable {
     // The sender must send at least the min price to mint
     // and acquire the NFT
-    // Or is allowed to do it for free
-    // The restriction is here as it doesn't apply for Piano King Dutch Auction
-    // which uses the mintFor function directly
-    require(
-      msg.value >= MIN_PRICE || preApprovedAddress[msg.sender] > 0,
-      "Not enough funds"
-    );
     preMintFor(msg.sender);
   }
 
@@ -122,22 +112,9 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
     if (isDutchAuction) {
       require(msg.sender == pianoKingDutchAuction, "Only through auction");
     }
-    uint256 amountOfToken;
-    if (isDutchAuction) {
-      // Only one token per purchase through Dutch Auction
-      amountOfToken = 1;
-    } else {
-      // We get the amount of tokens according to the value passed
-      // by the sender. Since Solidity only supports integer numbers
-      // the division will be an integer whose value is floored
-      // (i.e. 15.9 => 15 and not 16)
-      // If this address has been given away some free tokens,
-      // we just get the amount of tokens given away
-      uint256 preApprovedAllowance = preApprovedAddress[addr];
-      amountOfToken = preApprovedAllowance > 0
-        ? preApprovedAllowance
-        : msg.value / MIN_PRICE;
-    }
+    uint256 amountOfToken = isDutchAuction ? 1 : msg.value / MIN_PRICE;
+    // If the result is 0 then not enough funds was sent
+    require(amountOfToken > 0, "Not enough funds");
 
     // We check there is enough supply left
     require(supplyLeft >= amountOfToken, "Not enough tokens left");
@@ -156,11 +133,6 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
 
     // Remove the newly acquired tokens from the supply left before next batch mint
     supplyLeft -= amountOfToken;
-
-    // Making sure the pre approved allowance can't be used twice
-    if (preApprovedAddress[addr] > 0) {
-      delete preApprovedAddress[addr];
-    }
   }
 
   /**
@@ -469,26 +441,24 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   }
 
   /**
-   * @dev Add addresses that can premint an NFT without paying
+   * @dev Set addresses directly in the list as if they preminted for free
+   * like for giveaway.
    */
-  function addPreApprovedAddresses(
+  function setPreApprovedAddresses(
     address[] calldata addrs,
     uint256[] calldata amounts
   ) external onlyOwner {
     for (uint256 i = 0; i < addrs.length; i++) {
-      preApprovedAddress[addrs[i]] = amounts[i];
-    }
-  }
+      address addr = addrs[i];
+      require(addr != address(0), "Invalid address");
+      uint256 amount = amounts[i];
+      require(amount + preMintAllowance[addr] <= 25, "Above maximum");
 
-  /**
-   * @dev Remove addresses that can premint an NFT without paying
-   */
-  function removePreApprovedAddresses(address[] calldata addrs)
-    external
-    onlyOwner
-  {
-    for (uint256 i = 0; i < addrs.length; i++) {
-      delete preApprovedAddress[addrs[i]];
+      if (preMintAllowance[addr] == 0 && amount > 0) {
+        preMintAddresses.push(addr);
+      }
+      // Can technically set amount to 0, so that address will be skipped
+      preMintAllowance[addr] = amount;
     }
   }
 
