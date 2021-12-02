@@ -84,15 +84,6 @@ describe("Piano King", function () {
     ).to.be.reverted;
   });
 
-  it("Should fail to mint an NFT with less than 0.2 ETH", async function () {
-    // Try to mint with 0.19 ETH, so not enough
-    await expect(
-      pianoKing.connect(buyer).preMint({
-        value: ethers.utils.parseEther("0.19"),
-      })
-    ).to.be.revertedWith("Not enough funds");
-  });
-
   it("Should fail to mint an NFT because the presale minting is not finished", async function () {
     // If the total supply is below 1000 then the presale batch mint hasn't been completed
     // yet and premint is not allowed yet

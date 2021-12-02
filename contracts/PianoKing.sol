@@ -243,8 +243,6 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
       }
       // Update the balance of the address
       _balances[addr] += allowance;
-      // Add the allowance just minted to the total supply
-      totalSupply += allowance;
       if (lowerBound >= 1000) {
         // We clear the mapping at this address as it's no longer needed
         delete preMintAllowance[addr];
@@ -259,6 +257,10 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
         // It's always nice to free unused storage anyway
         delete preMintAddresses;
       }
+      // Add the supply at the end to minimize interactions with storage
+      // It's not critical to know the actual current evolving supply
+      // during the batch mint so we can do that here
+      totalSupply += upperBound - lowerBound;
       // Get the bounds of the next range now that this batch mint is completed
       (lowerBound, upperBound) = getBounds();
       // Assign the supply available to premint for the next batch
@@ -452,7 +454,10 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
       address addr = addrs[i];
       require(addr != address(0), "Invalid address");
       uint256 amount = amounts[i];
-      require(amount + preMintAllowance[addr] <= 25, "Above maximum");
+      require(
+        amount + preMintAllowance[addr] <= MAX_TOKEN_PER_ADDRESS,
+        "Above maximum"
+      );
 
       if (preMintAllowance[addr] == 0 && amount > 0) {
         preMintAddresses.push(addr);

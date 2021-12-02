@@ -221,6 +221,21 @@ describe("Mock Piano King", function () {
     expect(await pianoKing.supplyLeft()).to.be.equal(2199);
   });
 
+  it("Should fail to mint an NFT with less than 0.2 ETH", async function () {
+    const tx = await pianoKing.setTotalSupply(1000);
+    await tx.wait(1);
+
+    const tx2 = await pianoKing.setSupplyLeft(2200);
+    await tx2.wait(1);
+
+    // Try to mint with 0.19 ETH, so not enough
+    await expect(
+      pianoKing.connect(buyer).preMint({
+        value: ethers.utils.parseEther("0.19"),
+      })
+    ).to.be.revertedWith("Not enough funds");
+  });
+
   it("Should fail to premint more than 25 NFT directly in phase 1", async function () {
     // Set the total supply to 1000 to mimick post presale premint
     const totalSupplyTx = await pianoKing.setTotalSupply(1000);
