@@ -3,7 +3,7 @@
 This is the official repository of **Piano King** smart contracts.
 **Only the addresses of the contracts posted here should be trusted as the official ones**. To see the addresses, scroll down.
 
-The smart contracts are coded in **Solidity** and is meant to be deployed on Ethereum mainnet. The project relies on **Hardhat** as its Ethereum (or EVM compatible) development environment. The non Solidity part of the project is coded in **TypeScript**.
+The smart contracts are coded in **Solidity** and are meant to be deployed on Ethereum mainnet. The project relies on **Hardhat** as its Ethereum (or EVM compatible) development environment. The non Solidity part of the project is coded in **TypeScript**.
 
 # Getting started
 
@@ -46,6 +46,6 @@ COINMARKETCAP_API_KEY=<YOUR_COINMARKET_API_KEY>
 
 # Current status of contracts
 
-- Piano King Whitelist: Deployed to Ethereum Mainnet - [0xB2E31C3D51bbfefB4653789CF0965f9dfa7C902a](https://etherscan.io/address/0xB2E31C3D51bbfefB4653789CF0965f9dfa7C902a)
-- Piano King: Under development - Planned deployment on Ethereum mainnet by December 8th
-- Piano King Dutch Auction: Under development - Maybe deployed later
+- **Piano King Whitelist:** Deployed to Ethereum Mainnet - [0xB2E31C3D51bbfefB4653789CF0965f9dfa7C902a](https://etherscan.io/address/0xB2E31C3D51bbfefB4653789CF0965f9dfa7C902a)
+- **Piano King:** Under development - Planned deployment on Ethereum mainnet by December 8th
+- **Piano King Dutch Auction:** Under development - Maybe deployed later
