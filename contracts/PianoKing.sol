@@ -8,6 +8,7 @@ import "./PianoKingWhitelist.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/interfaces/IERC2981.sol";
 
 /**
  * @dev The contract of Piano King NFTs.
@@ -21,7 +22,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
  * ERC1155 will further reduce gas fee. With the ERC1155 we interact with just
  * one mapping during mint instead of two for ERC721, but it is a nested mapping.
  */
-contract PianoKing is ERC721, Ownable, VRFConsumerBase {
+contract PianoKing is ERC721, Ownable, VRFConsumerBase, IERC2981 {
   using Address for address payable;
   using Strings for uint256;
 
@@ -29,6 +30,9 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   // The amount in Wei (0.2 ETH by default) required to give this contract to mint an NFT
   // for the 4000 tokens following the 1000 in presale
   uint256 public constant MIN_PRICE = 200000000000000000;
+  // The royalties taken on each sale. Can range from 0 to 10000
+  // 500 => 5%
+  uint16 internal constant ROYALTIES = 500;
   // The current minted supply
   uint256 public totalSupply;
   // TO-DO: replace this url by the base url where the metadata
@@ -48,6 +52,7 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   uint128 internal randomSeed;
   // The random number used as the base for the incrementor in the sequence
   uint128 internal randomIncrementor;
+
   // Indicate if a random number has just been requested
   bool internal hasRequestedRandomness;
   // Indicate if the random number is ready to be used
@@ -524,5 +529,24 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
    */
   function getPianoKingWallet() external view returns (address) {
     return pianoKingWallet;
+  }
+
+  /**
+   * @dev Called with the sale price to determine how much royalty is owed and to whom.
+   * @param tokenId - the NFT asset queried for royalty information
+   * @param salePrice - the sale price of the NFT asset specified by `tokenId`
+   * @return receiver - address of who should be sent the royalty payment
+   * @return royaltyAmount - the royalty payment amount for `salePrice`
+   */
+  function royaltyInfo(uint256 tokenId, uint256 salePrice)
+    external
+    view
+    override
+    returns (address receiver, uint256 royaltyAmount)
+  {
+    receiver = pianoKingWallet;
+    // We divide it by 10000 as the royalties can change from
+    // 0 to 10000 representing percents with 2 decimals
+    royaltyAmount = (salePrice * ROYALTIES) / 10000;
   }
 }
