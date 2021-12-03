@@ -150,7 +150,7 @@ contract PianoKingPrivate is
     returns (address receiver, uint256 royaltyAmount)
   {
     // Check the token does exist
-    require(_exists(tokenId), "Token doesn't exist");
+    require(_exists(tokenId), "Token does not exist");
     // Get the details associated to the token
     TokenDetails storage details = idToTokenDetails[tokenId];
     // The minter will receive all the royalties and the distribution

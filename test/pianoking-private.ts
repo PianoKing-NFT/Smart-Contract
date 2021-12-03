@@ -141,4 +141,34 @@ describe("Whitelist", function () {
     // to be sent to the minter to be 0.45 ETH
     expect(royalties).to.be.equal(ethers.utils.parseEther("0.45"));
   });
+
+  it("Should fail to mint an NFT as a non-authorized sender", async function () {
+    await expect(
+      pianoKingPrivate.mintFor(
+        recipient.address,
+        "https://example.com/test",
+        creator.address,
+        250,
+        200
+      )
+    ).to.be.revertedWith("Not minter");
+  });
+
+  it("Should fail to get royalty info for a non-existant token", async function () {
+    await expect(pianoKingPrivate.royaltyInfo(0, 0)).to.be.revertedWith(
+      "Token does not exist"
+    );
+  });
+
+  it("Should fail to get creator royalty for a non-existant token", async function () {
+    await expect(
+      pianoKingPrivate.getRoyaltyForCreator(0, 0)
+    ).to.be.revertedWith("Token does not exist");
+  });
+
+  it("Should fail to set minter to the zero address", async function () {
+    await expect(
+      pianoKingPrivate.setMinter(ethers.constants.AddressZero)
+    ).to.be.revertedWith("Invalid address");
+  });
 });
