@@ -24,6 +24,15 @@ async function main() {
   );
   console.log("Piano King deployed to:", pianoKing.address);
 
+  const pianoKingRNConsumer = await ethers.getContractAt(
+    "PianoKingRNConsumer",
+    process.env.PIANO_KING_RN_CONSUMER as string
+  );
+  console.log(
+    "Piano King RN Consumer deployed to:",
+    pianoKingRNConsumer.address
+  );
+
   const addresses: string[] = [];
   for (let i = 0; i < 250; i++) {
     // Send everything to the same address to have control over the supply
@@ -32,11 +41,11 @@ async function main() {
   }
 
   // Request a random number to use as seed for the batch
-  const randomnessTx = await pianoKing.requestBatchRN();
+  const randomnessTx = await pianoKingRNConsumer.requestRandomNumber();
   await randomnessTx.wait(1);
   console.log("Random number requested...");
 
-  pianoKing.on("RandomNumberReceived", async () => {
+  pianoKingRNConsumer.on("RandomNumberReceived", async () => {
     console.log("Random number received.");
     const tx = await pianoKing.doBatchMint(addresses, 125);
     await tx.wait(1);
