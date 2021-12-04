@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-node@v2
       
       - run: npm install 
-
+  
       - run: npx hardhat compile
       
   test:
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-node@v2
       
       - run: npm install 
-
+      - run: npx hardhat typechain
       - env:
           REPORT_GAS: true
         run: npx hardhat test    
@@ -56,5 +56,5 @@ jobs:
       - uses: actions/setup-node@v2
       
       - run: npm install 
-
+      - run: npx hardhat typechain
       - run: npx hardhat coverage    
