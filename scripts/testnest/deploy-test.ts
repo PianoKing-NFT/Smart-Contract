@@ -24,15 +24,23 @@ async function main() {
   await whiteList.deployed();
   console.log("Whitelist deployed to:", whiteList.address); */
 
+  const PianoKingRNConsumer = await ethers.getContractFactory(
+    "PianoKingRNConsumer"
+  );
+  const pianoKingRNConsumer = await PianoKingRNConsumer.deploy(
+    "0xb3dCcb4Cf7a26f6cf6B120Cf5A73875B7BBc655B",
+    "0x01BE23585060835E02B77ef475b0Cc51aA1e0709",
+    "0x2ed0feb3e7fd2022120aa84fab1945545a9f2ffc9076fd6156fa96eaff4c1311",
+    ethers.utils.parseEther("0.1")
+  );
+  await pianoKingRNConsumer.deployed();
+
   const PianoKing = await ethers.getContractFactory("MockPianoKing");
   // Configuration for Rinkeby as it's the testnet used by OpenSea for tests
   // and also avaible for Chainlink VRF
   const pianoKing = await PianoKing.deploy(
     "0x37E3ACd3f0d4B7d5B8cc31613A2B4e2Cb1A33397",
-    "0xb3dCcb4Cf7a26f6cf6B120Cf5A73875B7BBc655B",
-    "0x01BE23585060835E02B77ef475b0Cc51aA1e0709",
-    "0x2ed0feb3e7fd2022120aa84fab1945545a9f2ffc9076fd6156fa96eaff4c1311",
-    ethers.utils.parseEther("0.1")
+    pianoKingRNConsumer.address
   );
   await pianoKing.deployed();
   console.log("Piano King deployed to:", pianoKing.address);

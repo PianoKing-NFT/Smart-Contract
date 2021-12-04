@@ -9,6 +9,7 @@ import {
   LinkToken,
   MockPianoKing,
   PianoKingDutchAuction,
+  PianoKingRNConsumer,
 } from "../typechain";
 import { wait } from "../utils";
 
@@ -19,6 +20,7 @@ import { wait } from "../utils";
 describe("Dutch Auction", function () {
   let whiteList: PianoKingWhitelist;
   let pianoKing: MockPianoKing;
+  let pianoKingRNConsumer: PianoKingRNConsumer;
   let vrfCoordinator: VRFCoordinatorMock;
   let linkToken: LinkToken;
   let dutchAuction: PianoKingDutchAuction;
@@ -56,18 +58,26 @@ describe("Dutch Auction", function () {
     vrfCoordinator = await VRFCoordinator.deploy(linkToken.address);
     await vrfCoordinator.deployed();
 
-    // Deploy a mock version of Piano King contract which let us modify
-    // the total supply, which is necessary as the Dutch auction is only allowed
-    // after the first 8000 have been distributed
-    const PianoKingFactory = await ethers.getContractFactory("MockPianoKing");
-    pianoKing = await PianoKingFactory.deploy(
-      whiteList.address,
+    const PianoKingRNConsumer = await ethers.getContractFactory(
+      "PianoKingRNConsumer"
+    );
+    pianoKingRNConsumer = await PianoKingRNConsumer.deploy(
       vrfCoordinator.address,
       linkToken.address,
       // Key hash for mainnet
       "0xAA77729D3466CA35AE8D28B3BBAC7CC36A5031EFDC430821C02BC31A238AF445",
       // 2 LINK fee on mainnet
       LINK_FEE
+    );
+    await pianoKingRNConsumer.deployed();
+
+    // Deploy a mock version of Piano King contract which let us modify
+    // the total supply, which is necessary as the Dutch auction is only allowed
+    // after the first 8000 have been distributed
+    const PianoKingFactory = await ethers.getContractFactory("MockPianoKing");
+    pianoKing = await PianoKingFactory.deploy(
+      whiteList.address,
+      pianoKingRNConsumer.address
     );
     await pianoKing.deployed();
 
@@ -93,7 +103,7 @@ describe("Dutch Auction", function () {
     // therefore the first account, so we transfer some to PianoKing
     // contract in order to pay the fees for randomness requests
     const transferTx = await linkToken.transfer(
-      pianoKing.address,
+      pianoKingRNConsumer.address,
       INITIAL_LINK_BALANCE
     );
     transferTx.wait(1);
