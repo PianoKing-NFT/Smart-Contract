@@ -9,12 +9,14 @@ import {
   LinkToken,
   MockPianoKing,
   PianoKingDutchAuction,
+  PianoKingRNConsumer,
 } from "../typechain";
 import { getRandomNumber } from "../utils";
 
 describe("Mock Piano King", function () {
   let whiteList: PianoKingWhitelist;
   let pianoKing: MockPianoKing;
+  let pianoKingRNConsumer: PianoKingRNConsumer;
   let vrfCoordinator: VRFCoordinatorMock;
   let linkToken: LinkToken;
   let dutchAuction: PianoKingDutchAuction;
@@ -52,15 +54,23 @@ describe("Mock Piano King", function () {
     vrfCoordinator = await VRFCoordinator.deploy(linkToken.address);
     await vrfCoordinator.deployed();
 
-    const PianoKingFactory = await ethers.getContractFactory("MockPianoKing");
-    pianoKing = await PianoKingFactory.deploy(
-      whiteList.address,
+    const PianoKingRNConsumer = await ethers.getContractFactory(
+      "PianoKingRNConsumer"
+    );
+    pianoKingRNConsumer = await PianoKingRNConsumer.deploy(
       vrfCoordinator.address,
       linkToken.address,
       // Key hash for mainnet
       "0xAA77729D3466CA35AE8D28B3BBAC7CC36A5031EFDC430821C02BC31A238AF445",
       // 2 LINK fee on mainnet
       LINK_FEE
+    );
+    await pianoKingRNConsumer.deployed();
+
+    const PianoKingFactory = await ethers.getContractFactory("MockPianoKing");
+    pianoKing = await PianoKingFactory.deploy(
+      whiteList.address,
+      pianoKingRNConsumer.address
     );
     await pianoKing.deployed();
 
@@ -80,7 +90,7 @@ describe("Mock Piano King", function () {
     // therefore the first account, so we transfer some to PianoKing
     // contract in order to pay the fees for randomness requests
     const transferTx = await linkToken.transfer(
-      pianoKing.address,
+      pianoKingRNConsumer.address,
       INITIAL_LINK_BALANCE
     );
     await transferTx.wait(1);
@@ -409,12 +419,13 @@ describe("Mock Piano King", function () {
     }
 
     // Request a random number to use as seed for the batch
-    const randomnessTx = await pianoKing.requestBatchRN();
+    const randomnessTx = await pianoKingRNConsumer.requestRandomNumber();
     await randomnessTx.wait(1);
 
     // We get the request id of the randomness request from the events
-    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
-    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+    const requestRandomnessFilter =
+      pianoKingRNConsumer.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKingRNConsumer.queryFilter(
       requestRandomnessFilter
     );
     const requestId = requestRandomnessEvent.args.requestId;
@@ -423,11 +434,11 @@ describe("Mock Piano King", function () {
     const vrfTx = await vrfCoordinator.callBackWithRandomness(
       requestId,
       getRandomNumber(),
-      pianoKing.address
+      pianoKingRNConsumer.address
     );
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
-    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+    expect(await linkToken.balanceOf(pianoKingRNConsumer.address)).to.be.equal(
       INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
@@ -476,12 +487,13 @@ describe("Mock Piano King", function () {
     }
 
     // Request a random number to use as seed for the batch
-    const randomnessTx = await pianoKing.requestBatchRN();
+    const randomnessTx = await pianoKingRNConsumer.requestRandomNumber();
     await randomnessTx.wait(1);
 
     // We get the request id of the randomness request from the events
-    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
-    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+    const requestRandomnessFilter =
+      pianoKingRNConsumer.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKingRNConsumer.queryFilter(
       requestRandomnessFilter
     );
     const requestId = requestRandomnessEvent.args.requestId;
@@ -495,11 +507,11 @@ describe("Mock Piano King", function () {
       // 0. We handle this special case and the ids should still be all
       // unique
       10089,
-      pianoKing.address
+      pianoKingRNConsumer.address
     );
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
-    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+    expect(await linkToken.balanceOf(pianoKingRNConsumer.address)).to.be.equal(
       INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
@@ -548,12 +560,13 @@ describe("Mock Piano King", function () {
     }
 
     // Request a random number to Chainlink VRF
-    const randomnessTx = await pianoKing.requestBatchRN();
+    const randomnessTx = await pianoKingRNConsumer.requestRandomNumber();
     await randomnessTx.wait(1);
 
     // We get the request id of the randomness request from the events
-    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
-    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+    const requestRandomnessFilter =
+      pianoKingRNConsumer.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKingRNConsumer.queryFilter(
       requestRandomnessFilter
     );
     const requestId = requestRandomnessEvent.args.requestId;
@@ -562,11 +575,11 @@ describe("Mock Piano King", function () {
     const vrfTx = await vrfCoordinator.callBackWithRandomness(
       requestId,
       getRandomNumber(),
-      pianoKing.address
+      pianoKingRNConsumer.address
     );
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
-    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+    expect(await linkToken.balanceOf(pianoKingRNConsumer.address)).to.be.equal(
       INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
@@ -615,12 +628,13 @@ describe("Mock Piano King", function () {
     }
 
     // Request a random number to Chainlink VRF
-    const randomnessTx = await pianoKing.requestBatchRN();
+    const randomnessTx = await pianoKingRNConsumer.requestRandomNumber();
     await randomnessTx.wait(1);
 
     // We get the request id of the randomness request from the events
-    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
-    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+    const requestRandomnessFilter =
+      pianoKingRNConsumer.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKingRNConsumer.queryFilter(
       requestRandomnessFilter
     );
     const requestId = requestRandomnessEvent.args.requestId;
@@ -629,11 +643,11 @@ describe("Mock Piano King", function () {
     const vrfTx = await vrfCoordinator.callBackWithRandomness(
       requestId,
       getRandomNumber(),
-      pianoKing.address
+      pianoKingRNConsumer.address
     );
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
-    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+    expect(await linkToken.balanceOf(pianoKingRNConsumer.address)).to.be.equal(
       INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
@@ -681,12 +695,13 @@ describe("Mock Piano King", function () {
     }
 
     // Request a random number to Chainlink VRF
-    const randomnessTx = await pianoKing.requestBatchRN();
+    const randomnessTx = await pianoKingRNConsumer.requestRandomNumber();
     await randomnessTx.wait(1);
 
     // We get the request id of the randomness request from the events
-    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
-    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+    const requestRandomnessFilter =
+      pianoKingRNConsumer.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKingRNConsumer.queryFilter(
       requestRandomnessFilter
     );
     const requestId = requestRandomnessEvent.args.requestId;
@@ -695,11 +710,11 @@ describe("Mock Piano King", function () {
     const vrfTx = await vrfCoordinator.callBackWithRandomness(
       requestId,
       getRandomNumber(),
-      pianoKing.address
+      pianoKingRNConsumer.address
     );
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
-    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+    expect(await linkToken.balanceOf(pianoKingRNConsumer.address)).to.be.equal(
       INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
@@ -747,12 +762,13 @@ describe("Mock Piano King", function () {
     }
 
     // Request a random number to Chainlink VRF
-    const randomnessTx = await pianoKing.requestBatchRN();
+    const randomnessTx = await pianoKingRNConsumer.requestRandomNumber();
     await randomnessTx.wait(1);
 
     // We get the request id of the randomness request from the events
-    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
-    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+    const requestRandomnessFilter =
+      pianoKingRNConsumer.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKingRNConsumer.queryFilter(
       requestRandomnessFilter
     );
     const requestId = requestRandomnessEvent.args.requestId;
@@ -761,11 +777,11 @@ describe("Mock Piano King", function () {
     const vrfTx = await vrfCoordinator.callBackWithRandomness(
       requestId,
       getRandomNumber(),
-      pianoKing.address
+      pianoKingRNConsumer.address
     );
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
-    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+    expect(await linkToken.balanceOf(pianoKingRNConsumer.address)).to.be.equal(
       INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
@@ -814,12 +830,13 @@ describe("Mock Piano King", function () {
     }
 
     // Request a random number to Chainlink VRF
-    const randomnessTx = await pianoKing.requestBatchRN();
+    const randomnessTx = await pianoKingRNConsumer.requestRandomNumber();
     await randomnessTx.wait(1);
 
     // We get the request id of the randomness request from the events
-    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
-    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+    const requestRandomnessFilter =
+      pianoKingRNConsumer.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKingRNConsumer.queryFilter(
       requestRandomnessFilter
     );
     const requestId = requestRandomnessEvent.args.requestId;
@@ -828,11 +845,11 @@ describe("Mock Piano King", function () {
     const vrfTx = await vrfCoordinator.callBackWithRandomness(
       requestId,
       getRandomNumber(),
-      pianoKing.address
+      pianoKingRNConsumer.address
     );
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
-    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+    expect(await linkToken.balanceOf(pianoKingRNConsumer.address)).to.be.equal(
       INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
@@ -878,12 +895,13 @@ describe("Mock Piano King", function () {
     }
 
     // Request a random number to Chainlink VRF
-    const randomnessTx = await pianoKing.requestBatchRN();
+    const randomnessTx = await pianoKingRNConsumer.requestRandomNumber();
     await randomnessTx.wait(1);
 
     // We get the request id of the randomness request from the events
-    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
-    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+    const requestRandomnessFilter =
+      pianoKingRNConsumer.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKingRNConsumer.queryFilter(
       requestRandomnessFilter
     );
     const requestId = requestRandomnessEvent.args.requestId;
@@ -892,11 +910,11 @@ describe("Mock Piano King", function () {
     const vrfTx = await vrfCoordinator.callBackWithRandomness(
       requestId,
       getRandomNumber(),
-      pianoKing.address
+      pianoKingRNConsumer.address
     );
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
-    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+    expect(await linkToken.balanceOf(pianoKingRNConsumer.address)).to.be.equal(
       INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
