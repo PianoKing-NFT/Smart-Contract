@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/interfaces/IERC2981.sol";
 import "./PianoKingPrivateSplitter.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 
 /**
  * @dev Contract meant for the private collection of Piano King
@@ -20,16 +21,22 @@ contract PianoKingPrivate is
   Ownable
 {
   using Counters for Counters.Counter;
+  using Clones for address;
 
   Counters.Counter private _tokenIdCounter;
   address public minter = 0x32a5dE462B2e6f3bFeCc7d558B3ac871F0C2fbF8;
+  address internal splitterImplementation;
 
   // Mapping each token id to its splitter contract
-  mapping(uint256 => PianoKingPrivateSplitter) private idToSplitterContract;
+  mapping(uint256 => PianoKingPrivateSplitter) private idToSplitter;
   // Mapping each token id to its royalties
   mapping(uint256 => uint256) private idToRoyalties;
 
-  constructor() ERC721("Piano King Private", "PKP") {}
+  constructor() ERC721("Piano King Private", "PKP") {
+    // We deploy the splitter implementation directly from the constructor
+    // to make this contract the owner
+    splitterImplementation = address(new PianoKingPrivateSplitter());
+  }
 
   modifier onlyMinter() {
     require(msg.sender == minter, "Not minter");
@@ -71,12 +78,16 @@ contract PianoKingPrivate is
     idToRoyalties[tokenId] = minterRoyalties + creatorRoyalties;
     // Create a new splitter contract for this NFT to automatize
     // the division of royalties between the minter and the creator
-    idToSplitterContract[tokenId] = new PianoKingPrivateSplitter(
+    // We use a minimal clone proxy to save cost compared to a regular
+    // deploy
+    address payable splitterClone = payable(splitterImplementation.clone());
+    PianoKingPrivateSplitter(splitterClone).initiliaze(
       creator,
       minter,
       minterRoyalties,
       creatorRoyalties
     );
+    idToSplitter[tokenId] = PianoKingPrivateSplitter(splitterClone);
   }
 
   /**
@@ -110,7 +121,7 @@ contract PianoKingPrivate is
     view
     returns (address)
   {
-    return address(idToSplitterContract[tokenId]);
+    return address(idToSplitter[tokenId]);
   }
 
   /**
@@ -121,9 +132,9 @@ contract PianoKingPrivate is
     require(msg.sender == owner() || msg.sender == minter, "Not allowed");
     // Check the token does exist
     require(_exists(tokenId), "Token does not exist");
-    // Get the details associated to the token
+    // Get the splitter contract clone associated to the token
     PianoKingPrivateSplitter splitterContract = PianoKingPrivateSplitter(
-      idToSplitterContract[tokenId]
+      idToSplitter[tokenId]
     );
     splitterContract.retrieveRoyalties();
   }
@@ -145,7 +156,7 @@ contract PianoKingPrivate is
     require(_exists(tokenId), "Token does not exist");
     // The Splitter contract will receive the funds and allows to split
     // the payment between the minter and the creator
-    receiver = address(idToSplitterContract[tokenId]);
+    receiver = address(idToSplitter[tokenId]);
     // We divide it by 10000 as the royalties can change from
     // 0 to 10000 representing percents with 2 decimals
     royaltyAmount = (salePrice * idToRoyalties[tokenId]) / 10000;
