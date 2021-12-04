@@ -69,11 +69,14 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
   // at least before phase 2
   address internal pianoKingDutchAuction;
 
-  constructor(address _pianoKingWhitelistAddress, address _pianoKingRNConsumer)
-    ERC721("Piano King", "PK")
-  {
+  constructor(
+    address _pianoKingWhitelistAddress,
+    address _pianoKingRNConsumer,
+    address _pianoKingFunds
+  ) ERC721("Piano King", "PK") {
     pianoKingWhitelist = PianoKingWhitelist(_pianoKingWhitelistAddress);
     pianoKingRNConsumer = PianoKingRNConsumer(_pianoKingRNConsumer);
+    pianoKingFunds = _pianoKingFunds;
   }
 
   /**
@@ -160,7 +163,7 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     // return the same random number. However since it's a true random number
     // using the full range of a uint128 this has an extremely low chance of occuring.
     // And if it does we can still request another number.
-    // We can't use the randomSeed for comparison as it changes during the bathc mint
+    // We can't use the randomSeed for comparison as it changes during the batch mint
     require(incrementor != randomIncrementor, "Cannot use old random numbers");
     randomIncrementor = incrementor;
     randomSeed = seed;

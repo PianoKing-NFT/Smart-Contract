@@ -27,6 +27,8 @@ async function main() {
   const PianoKingRNConsumer = await ethers.getContractFactory(
     "PianoKingRNConsumer"
   );
+  // Configuration for Rinkeby as it's the testnet used by OpenSea for tests
+  // and also avaible for Chainlink VRF
   const pianoKingRNConsumer = await PianoKingRNConsumer.deploy(
     "0xb3dCcb4Cf7a26f6cf6B120Cf5A73875B7BBc655B",
     "0x01BE23585060835E02B77ef475b0Cc51aA1e0709",
@@ -35,12 +37,15 @@ async function main() {
   );
   await pianoKingRNConsumer.deployed();
 
+  const PianoKingFunds = await ethers.getContractFactory("PianoKingFunds");
+  const pianoKingFunds = await PianoKingFunds.deploy();
+  await pianoKingFunds.deployed();
+
   const PianoKing = await ethers.getContractFactory("MockPianoKing");
-  // Configuration for Rinkeby as it's the testnet used by OpenSea for tests
-  // and also avaible for Chainlink VRF
   const pianoKing = await PianoKing.deploy(
     "0x37E3ACd3f0d4B7d5B8cc31613A2B4e2Cb1A33397",
-    pianoKingRNConsumer.address
+    pianoKingRNConsumer.address,
+    pianoKingFunds.address
   );
   await pianoKing.deployed();
   console.log("Piano King deployed to:", pianoKing.address);

@@ -10,6 +10,7 @@ import {
   MockPianoKing,
   PianoKingDutchAuction,
   PianoKingRNConsumer,
+  PianoKingFunds,
 } from "../typechain";
 import { getRandomNumber } from "../utils";
 
@@ -18,6 +19,7 @@ describe("Mock Piano King", function () {
   let pianoKing: MockPianoKing;
   let pianoKingRNConsumer: PianoKingRNConsumer;
   let vrfCoordinator: VRFCoordinatorMock;
+  let pianoKingFunds: PianoKingFunds;
   let linkToken: LinkToken;
   let dutchAuction: PianoKingDutchAuction;
   let deployer: SignerWithAddress;
@@ -67,10 +69,15 @@ describe("Mock Piano King", function () {
     );
     await pianoKingRNConsumer.deployed();
 
+    const PianoKingFunds = await ethers.getContractFactory("PianoKingFunds");
+    pianoKingFunds = await PianoKingFunds.deploy();
+    await pianoKingFunds.deployed();
+
     const PianoKingFactory = await ethers.getContractFactory("MockPianoKing");
     pianoKing = await PianoKingFactory.deploy(
       whiteList.address,
-      pianoKingRNConsumer.address
+      pianoKingRNConsumer.address,
+      pianoKingFunds.address
     );
     await pianoKing.deployed();
 
