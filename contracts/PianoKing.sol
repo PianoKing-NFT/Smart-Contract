@@ -59,6 +59,8 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   PianoKingWhitelist public pianoKingWhitelist;
   // Address authorized to withdraw the funds
   address internal pianoKingWallet = 0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586;
+  // Address where the royalties should be sent to
+  address internal pianoKingFunds;
 
   // Doesn't have to be defined straight away, can be defined later
   // at least before phase 2
@@ -428,6 +430,14 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase {
   function setDutchAuction(address addr) external onlyOwner {
     require(addr != address(0), "Invalid address");
     pianoKingDutchAuction = addr;
+  }
+
+  /**
+   * @dev Set the address of the contract meant to hold the royalties
+   */
+  function setFundsContract(address addr) external onlyOwner {
+    require(addr != address(0), "Invalid address");
+    pianoKingFunds = addr;
   }
 
   /**
