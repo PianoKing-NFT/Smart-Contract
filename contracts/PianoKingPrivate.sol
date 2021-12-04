@@ -114,7 +114,8 @@ contract PianoKingPrivate is
   }
 
   /**
-   * @dev Send the royalties to
+   * @dev Send the royalties received so for for a given token
+   * to the minter and its creator
    */
   function retrieveRoyalties(uint256 tokenId) external {
     require(msg.sender == owner() || msg.sender == minter, "Not allowed");

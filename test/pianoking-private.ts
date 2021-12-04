@@ -145,10 +145,12 @@ describe("Piano King Private", function () {
   });
 
   it("Should retrieve funds received as royalties", async function () {
+    // The creator should have the default balance of 10,000 ETH
     expect(await ethers.provider.getBalance(creator.address)).to.be.equal(
       ethers.utils.parseEther("10000")
     );
 
+    // Mint a token
     const tx = await pianoKingPrivate
       .connect(minter)
       .mintFor(
@@ -160,17 +162,23 @@ describe("Piano King Private", function () {
       );
     await tx.wait(1);
 
+    // We get the current balance of the minter
     const minterBalance = await ethers.provider.getBalance(minter.address);
 
+    // A Splitter contract should have been created for the newly minted token
     const splitterContractAddress =
       await pianoKingPrivate.getTokenSplitterContract(0);
 
+    // We mimick what the exchange will do after a sale of the token
+    // that is simply sending all the royalties to the contract
     const sendETHTx = await recipient.sendTransaction({
       to: splitterContractAddress,
       value: ethers.utils.parseEther("1"),
     });
     await sendETHTx.wait(1);
 
+    // We withdraw the royalties from the contract to send them
+    // to the minter and creator according to the rate set for both
     const withdrawTx = await pianoKingPrivate.retrieveRoyalties(0);
     await withdrawTx.wait(1);
 
