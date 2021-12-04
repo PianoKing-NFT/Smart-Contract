@@ -272,29 +272,11 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     uint256 upperBound,
     uint256 incrementor
   ) internal pure returns (uint256 tokenId) {
-    if (lowerBound == 0) {
+    if (lowerBound < 8000) {
       // Presale mint (1000 tokens)
       tokenId = getTokenIdInRange(
         randomNumber,
         1009,
-        incrementor,
-        lowerBound,
-        upperBound
-      );
-    } else if (lowerBound == 1000) {
-      // Post pre-sale mint of 2200 tokens
-      tokenId = getTokenIdInRange(
-        randomNumber,
-        2203,
-        incrementor,
-        lowerBound,
-        upperBound
-      );
-    } else if (lowerBound < 8000) {
-      // Second post pre-sale mints of 1600 tokens
-      tokenId = getTokenIdInRange(
-        randomNumber,
-        1601,
         incrementor,
         lowerBound,
         upperBound
@@ -342,19 +324,10 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     view
     returns (uint256 lowerBound, uint256 upperBound)
   {
-    if (totalSupply < 1000) {
-      // For the presale
-      lowerBound = 0;
-      upperBound = 1000;
-    } else if (totalSupply < 3200) {
-      // For the 2200 tokens following the presale
-      lowerBound = 1000;
-      upperBound = 3200;
-    } else if (totalSupply < 8000) {
-      // For the batches of 1600 tokens following the presale and previous
-      // 2200 tokens
-      lowerBound = 3200 + ((totalSupply - 3200) / 1600) * 1600;
-      upperBound = lowerBound + 1600;
+    if (totalSupply < 8000) {
+      // For 8 batch mints of 1000 tokens including the presale
+      lowerBound = (totalSupply / 1000) * 1000;
+      upperBound = lowerBound + 1000;
     } else if (totalSupply < 10000) {
       // To get the 200 tokens slots to be distributed by Dutch auctions
       lowerBound = 8000 + ((totalSupply - 8000) / 200) * 200;
