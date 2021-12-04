@@ -1,27 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
+import "hardhat/console.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 
 /**
  * @dev Contract meant to receive the royalties for a given
  * token of Piano King Private and then splitting it between
  * the minter and the creator when sending the funds
+ * It is an implementation meant to be used via a proxy
+ * in Piano King Private contract
  */
-contract PianoKingPrivateSplitter is Ownable {
-  using Address for address payable;
-  address private immutable creator;
-  address private immutable minter;
-  uint256 private immutable minterRoyalties;
-  uint256 private immutable creatorRoyalties;
+contract PianoKingPrivateSplitter is OwnableUpgradeable {
+  using AddressUpgradeable for address payable;
+  address private creator;
+  address private minter;
+  uint256 private minterRoyalties;
+  uint256 private creatorRoyalties;
 
-  constructor(
+  function initiliaze(
     address _creator,
     address _minter,
     uint256 _minterRoyalties,
     uint256 _creatorRoyalties
-  ) {
+  ) public initializer {
+    __Ownable_init();
     creator = _creator;
     minter = _minter;
     minterRoyalties = _minterRoyalties;
