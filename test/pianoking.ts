@@ -7,11 +7,13 @@ import {
   PianoKing,
   VRFCoordinatorMock,
   LinkToken,
+  PianoKingRNConsumer,
 } from "../typechain";
 
 describe("Piano King", function () {
   let whiteList: PianoKingWhitelist;
   let pianoKing: PianoKing;
+  let pianoKingRNConsumer: PianoKingRNConsumer;
   let vrfCoordinator: VRFCoordinatorMock;
   let linkToken: LinkToken;
   let deployer: SignerWithAddress;
@@ -48,9 +50,10 @@ describe("Piano King", function () {
     vrfCoordinator = await VRFCoordinator.deploy(linkToken.address);
     await vrfCoordinator.deployed();
 
-    const PianoKingFactory = await ethers.getContractFactory("PianoKing");
-    pianoKing = await PianoKingFactory.deploy(
-      whiteList.address,
+    const PianoKingRNConsumer = await ethers.getContractFactory(
+      "PianoKingRNConsumer"
+    );
+    pianoKingRNConsumer = await PianoKingRNConsumer.deploy(
       vrfCoordinator.address,
       linkToken.address,
       // Key hash for mainnet
@@ -58,13 +61,20 @@ describe("Piano King", function () {
       // 2 LINK fee on mainnet
       LINK_FEE
     );
+    await pianoKingRNConsumer.deployed();
+
+    const PianoKingFactory = await ethers.getContractFactory("PianoKing");
+    pianoKing = await PianoKingFactory.deploy(
+      whiteList.address,
+      pianoKingRNConsumer.address
+    );
     await pianoKing.deployed();
 
     // The LINK have been given to the deployer of the contract
     // therefore the first account, so we transfer some to PianoKing
     // contract in order to pay the fees for randomness requests
     const transferTx = await linkToken.transfer(
-      pianoKing.address,
+      pianoKingRNConsumer.address,
       INITIAL_LINK_BALANCE
     );
     await transferTx.wait(1);
@@ -233,12 +243,13 @@ describe("Piano King", function () {
       }
     }
 
-    const randomnessTx = await pianoKing.requestBatchRN();
+    const randomnessTx = await pianoKingRNConsumer.requestRandomNumber();
     await randomnessTx.wait(1);
 
     // We get the request id of the randomness request from the events
-    const requestRandomnessFilter = pianoKing.filters.RequestedRandomness();
-    const [requestRandomnessEvent] = await pianoKing.queryFilter(
+    const requestRandomnessFilter =
+      pianoKingRNConsumer.filters.RequestedRandomness();
+    const [requestRandomnessEvent] = await pianoKingRNConsumer.queryFilter(
       requestRandomnessFilter
     );
     const requestId = requestRandomnessEvent.args.requestId;
@@ -248,11 +259,11 @@ describe("Piano King", function () {
     const vrfTx = await vrfCoordinator.callBackWithRandomness(
       requestId,
       randomNumber,
-      pianoKing.address
+      pianoKingRNConsumer.address
     );
     await vrfTx.wait(1);
     // The contract should have lost 2 LINK consumed by Chainlink VRF as fee
-    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+    expect(await linkToken.balanceOf(pianoKingRNConsumer.address)).to.be.equal(
       INITIAL_LINK_BALANCE.sub(LINK_FEE)
     );
 
@@ -279,17 +290,17 @@ describe("Piano King", function () {
     const initialDeployerBalance = await linkToken.balanceOf(deployer.address);
 
     // Should have all its LINK for now
-    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+    expect(await linkToken.balanceOf(pianoKingRNConsumer.address)).to.be.equal(
       INITIAL_LINK_BALANCE
     );
 
-    const tx = await pianoKing.withdrawLinkTokens(
+    const tx = await pianoKingRNConsumer.withdrawLinkTokens(
       ethers.utils.parseEther("10")
     );
     await tx.wait(1);
 
     // 10 LINK should have been deducted from the contract balance
-    expect(await linkToken.balanceOf(pianoKing.address)).to.be.equal(
+    expect(await linkToken.balanceOf(pianoKingRNConsumer.address)).to.be.equal(
       INITIAL_LINK_BALANCE.sub(ethers.utils.parseEther("10"))
     );
     // And the owner of the contract should now own the withdrawn LINK

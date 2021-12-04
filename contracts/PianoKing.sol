@@ -5,10 +5,10 @@ import "hardhat/console.sol";
 import "./lib/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./PianoKingWhitelist.sol";
-import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/interfaces/IERC2981.sol";
+import "./PianoKingRNConsumer.sol";
 
 /**
  * @dev The contract of Piano King NFTs.
@@ -22,7 +22,7 @@ import "@openzeppelin/contracts/interfaces/IERC2981.sol";
  * ERC1155 will further reduce gas fee. With the ERC1155 we interact with just
  * one mapping during mint instead of two for ERC721, but it is a nested mapping.
  */
-contract PianoKing is ERC721, Ownable, VRFConsumerBase, IERC2981 {
+contract PianoKing is ERC721, Ownable, IERC2981 {
   using Address for address payable;
   using Strings for uint256;
 
@@ -52,15 +52,13 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase, IERC2981 {
   uint128 internal randomSeed;
   // The random number used as the base for the incrementor in the sequence
   uint128 internal randomIncrementor;
-
-  // Indicate if a random number has just been requested
-  bool internal hasRequestedRandomness;
   // Indicate if the random number is ready to be used
   bool internal canUseRandomNumber;
   // Allow to keep track of iterations through multiple consecutives
   // transactions for batch mints
   uint16 internal lastBatchIndex;
 
+  PianoKingRNConsumer public pianoKingRNConsumer;
   PianoKingWhitelist public pianoKingWhitelist;
   // Address authorized to withdraw the funds
   address internal pianoKingWallet = 0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586;
@@ -71,23 +69,11 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase, IERC2981 {
   // at least before phase 2
   address internal pianoKingDutchAuction;
 
-  // Data for chainlink
-  bytes32 internal keyhash;
-  uint256 internal fee;
-
-  event RequestedRandomness(bytes32 indexed requestId);
-  event RandomNumberReceived(bytes32 indexed requestId);
-
-  constructor(
-    address _pianoKingWhitelistAddress,
-    address _vrfCoordinator,
-    address _linkToken,
-    bytes32 _keyhash,
-    uint256 _fee
-  ) VRFConsumerBase(_vrfCoordinator, _linkToken) ERC721("Piano King", "PK") {
-    keyhash = _keyhash;
-    fee = _fee;
+  constructor(address _pianoKingWhitelistAddress, address _pianoKingRNConsumer)
+    ERC721("Piano King", "PK")
+  {
     pianoKingWhitelist = PianoKingWhitelist(_pianoKingWhitelistAddress);
+    pianoKingRNConsumer = PianoKingRNConsumer(_pianoKingRNConsumer);
   }
 
   /**
@@ -143,58 +129,6 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase, IERC2981 {
   }
 
   /**
-   * @dev Request the random number to be used for a batch mint
-   */
-  function requestBatchRN() external onlyOwner {
-    // Can trigger only one randomness request at a time
-    require(!hasRequestedRandomness, "Random number already requested");
-    // Check that no batch minting is in progress
-    require(!canUseRandomNumber, "Current minting not finished");
-    // We need some LINK to pay a fee to the oracles
-    require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK");
-    // Request a random number to Chainlink oracles
-    bytes32 requestId = requestRandomness(keyhash, fee);
-    // Indicate that a request has been initiated
-    hasRequestedRandomness = true;
-    emit RequestedRandomness(requestId);
-  }
-
-  /**
-   * Called by Chainlink oracles when sending back a random number for
-   * a given request
-   * This function cannot use more than 200,000 gas or the transaction
-   * will fail
-   */
-  function fulfillRandomness(bytes32 requestId, uint256 randomNumber)
-    internal
-    override
-  {
-    // Put the first 16 bytes (equivalent to a uint128) into randomSeed
-    randomSeed = uint128(
-      randomNumber &
-        0xffffffffffffffffffffffffffffffff00000000000000000000000000000000
-    );
-    // Put the last 16 bytes (equivalent to a uint128) into randomIncrementor
-    randomIncrementor = uint128(
-      randomNumber &
-        0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
-    );
-    // We're making sure the random incrementor is high enough and most
-    // importantly not zero
-    if (randomIncrementor < 10000) {
-      randomIncrementor += 10000;
-    }
-    // Allow to trigger a new randomness request
-    hasRequestedRandomness = false;
-    // Mark the random number is ready to be used
-    canUseRandomNumber = true;
-    // Just to tell us that the random number has been received
-    // No need to broadcast, however making it public is not problematic
-    // and shouldn't since any data on-chain is public (even private variable)
-    emit RandomNumberReceived(requestId);
-  }
-
-  /**
    * @dev Do a batch mint for the tokens after the first 1000 of presale
    * This function is meant to be called multiple times in row to loop
    * through consecutive ranges of the array to spread gas costs as doing it
@@ -214,6 +148,26 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase, IERC2981 {
   }
 
   /**
+   * @dev Fetch the random numbers from RNConsumer contract
+   */
+  function fetchRandomNumbers() internal {
+    // Will revert if the numbers are not ready
+    (uint128 seed, uint128 incrementor) = pianoKingRNConsumer
+      .getRandomNumbers();
+    // By checking this we enforce the use of a different random number for
+    // each batch mint
+    // There is still the case in which two subsequent random number requests
+    // return the same random number. However since it's a true random number
+    // using the full range of a uint128 this has an extremely low chance of occuring.
+    // And if it does we can still request another number.
+    // We can't use the randomSeed for comparison as it changes during the bathc mint
+    require(incrementor != randomIncrementor, "Cannot use old random numbers");
+    randomIncrementor = incrementor;
+    randomSeed = seed;
+    canUseRandomNumber = true;
+  }
+
+  /**
    * @dev Generic batch mint
    * We don't use neither the _mint nor the _safeMint function
    * to optimize the process as much as possible in terms of gas
@@ -223,8 +177,10 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase, IERC2981 {
   function _batchMint(address[] memory addrs, uint256 count) internal {
     // To mint a batch all of its tokens need to have been preminted
     require(supplyLeft == 0, "Batch not yet sold out");
-    // Check that the random number is ready to be used
-    require(canUseRandomNumber, "Random number not ready");
+    if (!canUseRandomNumber) {
+      // Will revert the transaction if the random numbers are not ready
+      fetchRandomNumbers();
+    }
     // Get the ending index from the start index and the number of
     // addresses to loop through
     uint256 end = lastBatchIndex + count;
@@ -479,14 +435,6 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase, IERC2981 {
       }
       preMintAllowance[addr] = amount;
     }
-  }
-
-  /**
-   * @dev Let the owner of the contract withdraw LINK from the smart contract.
-   * Can be useful if too much was sent or LINK are no longer need on the contract
-   */
-  function withdrawLinkTokens(uint256 amount) external onlyOwner {
-    LINK.transfer(msg.sender, amount);
   }
 
   /**
