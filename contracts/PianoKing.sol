@@ -554,7 +554,8 @@ contract PianoKing is ERC721, Ownable, VRFConsumerBase, IERC2981 {
     override
     returns (address receiver, uint256 royaltyAmount)
   {
-    receiver = pianoKingWallet;
+    // The funds should be sent to the funds contract
+    receiver = pianoKingFunds;
     // We divide it by 10000 as the royalties can change from
     // 0 to 10000 representing percents with 2 decimals
     royaltyAmount = (salePrice * ROYALTIES) / 10000;
