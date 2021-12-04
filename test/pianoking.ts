@@ -95,6 +95,20 @@ describe("Piano King", function () {
     ).to.be.revertedWith("Presale mint not completed");
   });
 
+  it("Should return the right royalty info", async function () {
+    const [receiver, amount] = await pianoKing.royaltyInfo(
+      0,
+      ethers.utils.parseEther("3")
+    );
+    // It should be the address of Piano King wallet
+    expect(receiver).to.be.equal("0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586");
+    // It should be 5 percent of 3 ETH
+    expect(amount).to.be.closeTo(
+      ethers.utils.parseEther((3 * 0.05).toString()),
+      Math.pow(10, 6)
+    );
+  });
+
   /* it("Should set the piano king wallet address", async () => {
     // The address should be the one defined before in the beforeEach hook
     expect(await pianoKing.pianoKingWallet()).to.be.equal(
