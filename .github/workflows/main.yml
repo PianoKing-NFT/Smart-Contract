@@ -21,6 +21,9 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+      
+      - run: npm install 
 
       - run: npx hardhat compile
       
@@ -32,6 +35,9 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+      
+      - run: npm install 
 
       - env:
           REPORT_GAS: true
@@ -47,5 +53,8 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+      
+      - run: npm install 
 
       - run: npx hardhat coverage    
