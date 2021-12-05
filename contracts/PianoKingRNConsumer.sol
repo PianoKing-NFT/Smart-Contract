@@ -48,9 +48,10 @@ contract PianoKingRNConsumer is Ownable, VRFConsumerBase {
     require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK");
     // Request a random number to Chainlink oracles
     bytes32 requestId = requestRandomness(keyhash, fee);
+    // Prevent using the contract while the random number is being updated
+    canUseRandomNumber = false;
     // Indicate that a request has been initiated
     hasRequestedRandomness = true;
-    canUseRandomNumber = false;
     emit RequestedRandomness(requestId);
   }
 
