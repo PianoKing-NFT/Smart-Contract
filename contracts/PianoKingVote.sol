@@ -25,8 +25,8 @@ contract PianoKingVote is Ownable, ReentrancyGuard {
   //pianoking smart contract
   PianoKing public pianoKing;
 
-  constructor() {
-    pianoKing = PianoKing(0x770BC58f9A8F0d0c0Ed6999580105720960997Fa);
+  constructor(address _pianoKingAddress) {
+    pianoKing = PianoKing(_pianoKingAddress);
   }
 
   /**
