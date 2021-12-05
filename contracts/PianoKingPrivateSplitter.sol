@@ -50,4 +50,11 @@ contract PianoKingPrivateSplitter is OwnableUpgradeable {
     // Send the remaining balance to the minter
     payable(minter).sendValue(address(this).balance);
   }
+
+  /**
+   * @dev Gets the creator associated to this contract
+   */
+  function getCreator() external view returns (address) {
+    return creator;
+  }
 }

@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { PianoKingPrivate, PianoKingPrivateSplitter } from "../typechain";
+import { PianoKingPrivate } from "../typechain";
 
 describe("Piano King Private", function () {
   let pianoKingPrivate: PianoKingPrivate;
@@ -63,6 +63,14 @@ describe("Piano King Private", function () {
     const splitterContractAddress =
       await pianoKingPrivate.getTokenSplitterContract(0);
 
+    const splitterContract = await ethers.getContractAt(
+      "PianoKingPrivateSplitter",
+      splitterContractAddress
+    );
+
+    // The creator should be set properly
+    expect(await splitterContract.getCreator()).to.be.equal(creator.address);
+
     const [receiver, royalties] = await pianoKingPrivate.royaltyInfo(
       0,
       ethers.utils.parseEther("10")
@@ -100,12 +108,13 @@ describe("Piano King Private", function () {
 
     const splitterContractAddress =
       await pianoKingPrivate.getTokenSplitterContract(0);
-    const splitterContract = ethers.getContractAt(
+    const splitterContract = await ethers.getContractAt(
       "PianoKingPrivateSplitter",
       splitterContractAddress
     );
 
-    expect(splitterContract).to.be.not.equal(ethers.constants.AddressZero);
+    // The creator should be set properly
+    expect(await splitterContract.getCreator()).to.be.equal(creator.address);
 
     const [receiver, royalties] = await pianoKingPrivate.royaltyInfo(
       0,
@@ -144,6 +153,12 @@ describe("Piano King Private", function () {
     ).to.be.revertedWith("Invalid address");
   });
 
+  it("Should fail to set minter as non-authorized sender", async function () {
+    await expect(
+      pianoKingPrivate.connect(recipient).setMinter(creator.address)
+    ).to.be.revertedWith("Ownable: caller is not the owner");
+  });
+
   it("Should retrieve funds received as royalties", async function () {
     // The creator should have the default balance of 10,000 ETH
     expect(await ethers.provider.getBalance(creator.address)).to.be.equal(
@@ -179,18 +194,42 @@ describe("Piano King Private", function () {
 
     // We withdraw the royalties from the contract to send them
     // to the minter and creator according to the rate set for both
-    const withdrawTx = await pianoKingPrivate.retrieveRoyalties(0);
+    // Here the creator initiate the transaction
+    const withdrawTx = await pianoKingPrivate
+      .connect(creator)
+      .retrieveRoyalties(0);
     await withdrawTx.wait(1);
 
     // 0.02/(0.025+0.02) ~ 0.4444 => 44.44%
     // 0.4444 * 1 ETH = 0.4444
-    expect(await ethers.provider.getBalance(creator.address)).to.be.equal(
-      ethers.utils.parseEther("10000.4444")
+    expect(await ethers.provider.getBalance(creator.address)).to.be.closeTo(
+      ethers.utils.parseEther("10000.4444"),
+      ethers.utils.parseEther("0.0001").toNumber()
     );
     // 0.025/(0.025+0.02) ~ 0.5556 => 55.56%
     // 0.5556 * 1 ETH = 0.5556
     expect(await ethers.provider.getBalance(minter.address)).to.be.equal(
       minterBalance.add(ethers.utils.parseEther("0.5556"))
     );
+  });
+
+  it("Should fail to retrieve funds received as royalties as non-authorized sender", async function () {
+    // Mint a token
+    const tx = await pianoKingPrivate
+      .connect(minter)
+      .mintFor(
+        recipient.address,
+        "https://example.com/test",
+        creator.address,
+        250,
+        200
+      );
+    await tx.wait(1);
+
+    // The transaction should revert since only the contract owner or the minter
+    // is calling the function
+    await expect(
+      pianoKingPrivate.connect(recipient).retrieveRoyalties(0)
+    ).to.be.revertedWith("Not allowed");
   });
 });
