@@ -129,13 +129,21 @@ contract PianoKingPrivate is
    * to the minter and its creator
    */
   function retrieveRoyalties(uint256 tokenId) external {
-    require(msg.sender == owner() || msg.sender == minter, "Not allowed");
     // Check the token does exist
     require(_exists(tokenId), "Token does not exist");
     // Get the splitter contract clone associated to the token
     PianoKingPrivateSplitter splitterContract = PianoKingPrivateSplitter(
       idToSplitter[tokenId]
     );
+    // The sender can be either the owner of the contract, the minter or
+    // the creator of the NFT
+    require(
+      msg.sender == owner() ||
+        msg.sender == minter ||
+        msg.sender == splitterContract.getCreator(),
+      "Not allowed"
+    );
+    // Retrieve the royalties
     splitterContract.retrieveRoyalties();
   }
 
