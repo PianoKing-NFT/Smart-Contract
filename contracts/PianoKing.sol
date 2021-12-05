@@ -62,16 +62,21 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
   PianoKingWhitelist public pianoKingWhitelist;
   // Address authorized to withdraw the funds
   address internal pianoKingWallet = 0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586;
+  // Address where the royalties should be sent to
+  address internal pianoKingFunds;
 
   // Doesn't have to be defined straight away, can be defined later
   // at least before phase 2
   address internal pianoKingDutchAuction;
 
-  constructor(address _pianoKingWhitelistAddress, address _pianoKingRNConsumer)
-    ERC721("Piano King", "PK")
-  {
+  constructor(
+    address _pianoKingWhitelistAddress,
+    address _pianoKingRNConsumer,
+    address _pianoKingFunds
+  ) ERC721("Piano King", "PK") {
     pianoKingWhitelist = PianoKingWhitelist(_pianoKingWhitelistAddress);
     pianoKingRNConsumer = PianoKingRNConsumer(_pianoKingRNConsumer);
+    pianoKingFunds = _pianoKingFunds;
   }
 
   /**
@@ -158,7 +163,7 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     // return the same random number. However since it's a true random number
     // using the full range of a uint128 this has an extremely low chance of occuring.
     // And if it does we can still request another number.
-    // We can't use the randomSeed for comparison as it changes during the bathc mint
+    // We can't use the randomSeed for comparison as it changes during the batch mint
     require(incrementor != randomIncrementor, "Cannot use old random numbers");
     randomIncrementor = incrementor;
     randomSeed = seed;
@@ -272,29 +277,11 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     uint256 upperBound,
     uint256 incrementor
   ) internal pure returns (uint256 tokenId) {
-    if (lowerBound == 0) {
+    if (lowerBound < 8000) {
       // Presale mint (1000 tokens)
       tokenId = getTokenIdInRange(
         randomNumber,
         1009,
-        incrementor,
-        lowerBound,
-        upperBound
-      );
-    } else if (lowerBound == 1000) {
-      // Post pre-sale mint of 2200 tokens
-      tokenId = getTokenIdInRange(
-        randomNumber,
-        2203,
-        incrementor,
-        lowerBound,
-        upperBound
-      );
-    } else if (lowerBound < 8000) {
-      // Second post pre-sale mints of 1600 tokens
-      tokenId = getTokenIdInRange(
-        randomNumber,
-        1601,
         incrementor,
         lowerBound,
         upperBound
@@ -342,19 +329,10 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     view
     returns (uint256 lowerBound, uint256 upperBound)
   {
-    if (totalSupply < 1000) {
-      // For the presale
-      lowerBound = 0;
-      upperBound = 1000;
-    } else if (totalSupply < 3200) {
-      // For the 2200 tokens following the presale
-      lowerBound = 1000;
-      upperBound = 3200;
-    } else if (totalSupply < 8000) {
-      // For the batches of 1600 tokens following the presale and previous
-      // 2200 tokens
-      lowerBound = 3200 + ((totalSupply - 3200) / 1600) * 1600;
-      upperBound = lowerBound + 1600;
+    if (totalSupply < 8000) {
+      // For 8 batch mints of 1000 tokens including the presale
+      lowerBound = (totalSupply / 1000) * 1000;
+      upperBound = lowerBound + 1000;
     } else if (totalSupply < 10000) {
       // To get the 200 tokens slots to be distributed by Dutch auctions
       lowerBound = 8000 + ((totalSupply - 8000) / 200) * 200;
@@ -389,6 +367,14 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
   function setDutchAuction(address addr) external onlyOwner {
     require(addr != address(0), "Invalid address");
     pianoKingDutchAuction = addr;
+  }
+
+  /**
+   * @dev Set the address of the contract meant to hold the royalties
+   */
+  function setFundsContract(address addr) external onlyOwner {
+    require(addr != address(0), "Invalid address");
+    pianoKingFunds = addr;
   }
 
   /**
@@ -492,7 +478,8 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     override
     returns (address receiver, uint256 royaltyAmount)
   {
-    receiver = pianoKingWallet;
+    // The funds should be sent to the funds contract
+    receiver = pianoKingFunds;
     // We divide it by 10000 as the royalties can change from
     // 0 to 10000 representing percents with 2 decimals
     royaltyAmount = (salePrice * ROYALTIES) / 10000;

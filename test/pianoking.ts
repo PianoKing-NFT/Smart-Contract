@@ -8,12 +8,14 @@ import {
   VRFCoordinatorMock,
   LinkToken,
   PianoKingRNConsumer,
+  PianoKingFunds,
 } from "../typechain";
 
 describe("Piano King", function () {
   let whiteList: PianoKingWhitelist;
   let pianoKing: PianoKing;
   let pianoKingRNConsumer: PianoKingRNConsumer;
+  let pianoKingFunds: PianoKingFunds;
   let vrfCoordinator: VRFCoordinatorMock;
   let linkToken: LinkToken;
   let deployer: SignerWithAddress;
@@ -63,10 +65,15 @@ describe("Piano King", function () {
     );
     await pianoKingRNConsumer.deployed();
 
+    const PianoKingFunds = await ethers.getContractFactory("PianoKingFunds");
+    pianoKingFunds = await PianoKingFunds.deploy();
+    await pianoKingFunds.deployed();
+
     const PianoKingFactory = await ethers.getContractFactory("PianoKing");
     pianoKing = await PianoKingFactory.deploy(
       whiteList.address,
-      pianoKingRNConsumer.address
+      pianoKingRNConsumer.address,
+      pianoKingFunds.address
     );
     await pianoKing.deployed();
 
@@ -110,8 +117,8 @@ describe("Piano King", function () {
       0,
       ethers.utils.parseEther("3")
     );
-    // It should be the address of Piano King wallet
-    expect(receiver).to.be.equal("0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586");
+    // It should be the address of Piano King Funds
+    expect(receiver).to.be.equal(pianoKingFunds.address);
     // It should be 5 percent of 3 ETH
     expect(amount).to.be.closeTo(
       ethers.utils.parseEther((3 * 0.05).toString()),
