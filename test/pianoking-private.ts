@@ -129,6 +129,38 @@ describe("Piano King Private", function () {
     expect(royalties).to.be.equal(ethers.utils.parseEther("0.45"));
   });
 
+  it("Should mint an NFT then burn it", async function () {
+    // For now the supply is empty, nothing has been minted
+    expect(await pianoKingPrivate.totalSupply()).to.be.equal(0);
+
+    // Mint a new NFT
+    const tx = await pianoKingPrivate
+      .connect(minter)
+      .mint("https://example.com/test", creator.address, 250, 200);
+    await tx.wait(1);
+
+    // The minter should have received the token from the mint since
+    // we used the mint function which send it right to the minter
+    expect(await pianoKingPrivate.balanceOf(minter.address)).to.be.equal(1);
+    // This is the first token so it's id will be 0 as it's an incremental id
+    expect(await pianoKingPrivate.ownerOf(0)).to.be.equal(minter.address);
+    // The supply should have increased by 1 after the mint
+    expect(await pianoKingPrivate.totalSupply()).to.be.equal(1);
+
+    // We burn the NFT we've just minted
+    const burnTx = await pianoKingPrivate.connect(minter).burn(0);
+    await burnTx.wait(1);
+
+    // The minter should have nothing
+    expect(await pianoKingPrivate.balanceOf(minter.address)).to.be.equal(0);
+    // Trying to get the owner of the token will revert since it doesn't exist anymore
+    await expect(pianoKingPrivate.ownerOf(0)).to.be.revertedWith(
+      "ERC721: owner query for nonexistent token"
+    );
+    // The total supply is back to 0
+    expect(await pianoKingPrivate.totalSupply()).to.be.equal(0);
+  });
+
   it("Should fail to mint an NFT as a non-authorized sender", async function () {
     await expect(
       pianoKingPrivate.mintFor(

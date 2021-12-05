@@ -32,6 +32,8 @@ contract PianoKingPrivate is
   // Mapping each token id to its royalties
   mapping(uint256 => uint256) private idToRoyalties;
 
+  uint256 public totalSupply;
+
   constructor() ERC721("Piano King Private", "PKP") {
     // We deploy the splitter implementation directly from the constructor
     // to make this contract the owner
@@ -103,6 +105,24 @@ contract PianoKingPrivate is
 
   // The following functions are overrides required by Solidity.
 
+  /**
+   * @dev Override of an OpenZeppelin hook called on before any token transfer
+   */
+  function _beforeTokenTransfer(
+    address from,
+    address to,
+    uint256 tokenId
+  ) internal override {
+    if (to == address(0)) {
+      // Decrease the supply by one when a token is burnt
+      totalSupply -= 1;
+    } else if (from == address(0)) {
+      // Increase the supply by one when a token is minted
+      totalSupply += 1;
+    }
+    super._beforeTokenTransfer(from, to, tokenId);
+  }
+
   function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
     super._burn(tokenId);
   }
@@ -125,6 +145,8 @@ contract PianoKingPrivate is
     view
     returns (address)
   {
+    // Check the token does exist
+    require(_exists(tokenId), "Token does not exist");
     return address(idToSplitter[tokenId]);
   }
 
