@@ -38,13 +38,16 @@ contract PianoKingPrivate is
     splitterImplementation = address(new PianoKingPrivateSplitter());
   }
 
+  /**
+   * @dev Modifier restricting access to only the minter
+   */
   modifier onlyMinter() {
     require(msg.sender == minter, "Not minter");
     _;
   }
 
   /**
-   * @dev Mint and send it directly do the minter
+   * @dev Mint and send it directly to the minter
    */
   function mint(
     string memory uri,
@@ -114,7 +117,8 @@ contract PianoKingPrivate is
   }
 
   /**
-   * @dev Get the details of a given token
+   * @dev Get the address of the Splitter Contract associated to
+   * a token
    */
   function getTokenSplitterContract(uint256 tokenId)
     external
