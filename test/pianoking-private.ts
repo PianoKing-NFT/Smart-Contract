@@ -226,8 +226,8 @@ describe("Piano King Private", function () {
       );
     await tx.wait(1);
 
-    // The transaction should revert since only the contract owner or the minter
-    // is calling the function
+    // The transaction should revert since only the contract owner, the minter or
+    // the creator of the NFT can call this function
     await expect(
       pianoKingPrivate.connect(recipient).retrieveRoyalties(0)
     ).to.be.revertedWith("Not allowed");
