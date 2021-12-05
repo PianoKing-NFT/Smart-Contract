@@ -62,16 +62,21 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
   PianoKingWhitelist public pianoKingWhitelist;
   // Address authorized to withdraw the funds
   address internal pianoKingWallet = 0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586;
+  // Address where the royalties should be sent to
+  address internal pianoKingFunds;
 
   // Doesn't have to be defined straight away, can be defined later
   // at least before phase 2
   address internal pianoKingDutchAuction;
 
-  constructor(address _pianoKingWhitelistAddress, address _pianoKingRNConsumer)
-    ERC721("Piano King", "PK")
-  {
+  constructor(
+    address _pianoKingWhitelistAddress,
+    address _pianoKingRNConsumer,
+    address _pianoKingFunds
+  ) ERC721("Piano King", "PK") {
     pianoKingWhitelist = PianoKingWhitelist(_pianoKingWhitelistAddress);
     pianoKingRNConsumer = PianoKingRNConsumer(_pianoKingRNConsumer);
+    pianoKingFunds = _pianoKingFunds;
   }
 
   /**
@@ -158,7 +163,7 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     // return the same random number. However since it's a true random number
     // using the full range of a uint128 this has an extremely low chance of occuring.
     // And if it does we can still request another number.
-    // We can't use the randomSeed for comparison as it changes during the bathc mint
+    // We can't use the randomSeed for comparison as it changes during the batch mint
     require(incrementor != randomIncrementor, "Cannot use old random numbers");
     randomIncrementor = incrementor;
     randomSeed = seed;
@@ -392,6 +397,14 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
   }
 
   /**
+   * @dev Set the address of the contract meant to hold the royalties
+   */
+  function setFundsContract(address addr) external onlyOwner {
+    require(addr != address(0), "Invalid address");
+    pianoKingFunds = addr;
+  }
+
+  /**
    * @dev Set the base URI of every token URI
    * Improvement proposal:
    * - This setter is here as a fallback in case a mistake is made
@@ -492,7 +505,8 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     override
     returns (address receiver, uint256 royaltyAmount)
   {
-    receiver = pianoKingWallet;
+    // The funds should be sent to the funds contract
+    receiver = pianoKingFunds;
     // We divide it by 10000 as the royalties can change from
     // 0 to 10000 representing percents with 2 decimals
     royaltyAmount = (salePrice * ROYALTIES) / 10000;

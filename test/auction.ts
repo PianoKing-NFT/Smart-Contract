@@ -10,6 +10,7 @@ import {
   MockPianoKing,
   PianoKingDutchAuction,
   PianoKingRNConsumer,
+  PianoKingFunds,
 } from "../typechain";
 import { wait } from "../utils";
 
@@ -24,6 +25,7 @@ describe("Dutch Auction", function () {
   let vrfCoordinator: VRFCoordinatorMock;
   let linkToken: LinkToken;
   let dutchAuction: PianoKingDutchAuction;
+  let pianoKingFunds: PianoKingFunds;
   let deployer: SignerWithAddress;
   let buyer: SignerWithAddress;
   let pianoKingWallet: SignerWithAddress;
@@ -71,13 +73,18 @@ describe("Dutch Auction", function () {
     );
     await pianoKingRNConsumer.deployed();
 
+    const PianoKingFunds = await ethers.getContractFactory("PianoKingFunds");
+    pianoKingFunds = await PianoKingFunds.deploy();
+    await pianoKingFunds.deployed();
+
     // Deploy a mock version of Piano King contract which let us modify
     // the total supply, which is necessary as the Dutch auction is only allowed
     // after the first 8000 have been distributed
     const PianoKingFactory = await ethers.getContractFactory("MockPianoKing");
     pianoKing = await PianoKingFactory.deploy(
       whiteList.address,
-      pianoKingRNConsumer.address
+      pianoKingRNConsumer.address,
+      pianoKingFunds.address
     );
     await pianoKing.deployed();
 

@@ -5,8 +5,12 @@ import "hardhat/console.sol";
 import "../PianoKing.sol";
 
 contract MockPianoKing is PianoKing {
-  constructor(address _pianoKingWhitelistAddress, address _pianoKingRNConsumer)
-    PianoKing(_pianoKingWhitelistAddress, _pianoKingRNConsumer)
+  constructor(
+    address _pianoKingWhitelistAddress,
+    address _pianoKingRNConsumer,
+    address _pianoKingFunds
+  )
+    PianoKing(_pianoKingWhitelistAddress, _pianoKingRNConsumer, _pianoKingFunds)
   {}
 
   function setTotalSupply(uint256 supply) external onlyOwner {
