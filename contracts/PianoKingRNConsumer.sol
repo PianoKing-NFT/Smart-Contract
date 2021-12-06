@@ -11,15 +11,20 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
  * from Chainlink VRF
  */
 contract PianoKingRNConsumer is Ownable, VRFConsumerBase {
+  // The 3 possibles status for the random number
+  enum RNStatus {
+    undefined,
+    requested,
+    received
+  }
+
   // The random number used as a seed for the random sequence for batch mint
   uint128 internal randomSeed;
   // The random number used as the base for the incrementor in the sequence
   uint128 internal randomIncrementor;
 
-  // Indicate if a random number has just been requested
-  bool internal hasRequestedRandomness;
-  // Indicate if the random number is ready to be used
-  bool internal canUseRandomNumber;
+  // Indicate the status of the random number
+  RNStatus internal randomNumberStatus;
 
   // Data for chainlink
   bytes32 internal keyhash;
@@ -43,14 +48,16 @@ contract PianoKingRNConsumer is Ownable, VRFConsumerBase {
    */
   function requestRandomNumber() external onlyOwner {
     // Can trigger only one randomness request at a time
-    require(!hasRequestedRandomness, "Random number already requested");
+    require(
+      randomNumberStatus != RNStatus.requested,
+      "Random number already requested"
+    );
     // We need some LINK to pay a fee to the oracles
     require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK");
+    // Indicate that a request has been initiated
+    randomNumberStatus = RNStatus.requested;
     // Request a random number to Chainlink oracles
     bytes32 requestId = requestRandomness(keyhash, fee);
-    // Indicate that a request has been initiated
-    hasRequestedRandomness = true;
-    canUseRandomNumber = false;
     emit RequestedRandomness(requestId);
   }
 
@@ -80,9 +87,7 @@ contract PianoKingRNConsumer is Ownable, VRFConsumerBase {
       randomIncrementor += 10000;
     }
     // Allow to trigger a new randomness request
-    hasRequestedRandomness = false;
-    // Mark the random number is ready to be used
-    canUseRandomNumber = true;
+    randomNumberStatus = RNStatus.received;
     // Just to tell us that the random number has been received
     // No need to broadcast, however making it public is not problematic
     // and shouldn't since any data on-chain is public (even private variable)
@@ -97,7 +102,7 @@ contract PianoKingRNConsumer is Ownable, VRFConsumerBase {
     view
     returns (uint128 _randomSeed, uint128 _randomIncrementor)
   {
-    require(canUseRandomNumber, "Random number not ready");
+    require(randomNumberStatus == RNStatus.received, "Random number not ready");
     _randomSeed = randomSeed;
     _randomIncrementor = randomIncrementor;
   }
