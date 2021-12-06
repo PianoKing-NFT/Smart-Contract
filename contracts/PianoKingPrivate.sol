@@ -116,6 +116,9 @@ contract PianoKingPrivate is
     if (to == address(0)) {
       // Decrease the supply by one when a token is burnt
       totalSupply -= 1;
+      // Free some space as these are no longer needed
+      delete idToSplitter[tokenId];
+      delete idToRoyalties[tokenId];
     } else if (from == address(0)) {
       // Increase the supply by one when a token is minted
       totalSupply += 1;

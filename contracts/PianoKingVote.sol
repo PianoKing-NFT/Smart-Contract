@@ -15,13 +15,13 @@ contract PianoKingVote is Ownable, ReentrancyGuard {
 
   //if a vote is open
   bool private voteOpen = false;
- 
+
   //projects to vote for
   address[] private choices;
 
   //storage for current votes
   uint8[] private votes;
- 
+
   //pianoking smart contract
   PianoKing public pianoKing;
 
@@ -36,32 +36,37 @@ contract PianoKingVote is Ownable, ReentrancyGuard {
     // Checks there is an ongoing vote
     require(voteOpen, "No ongoing vote");
     // Checks tokenIds size doesn't exceed limit
-    require(tokenIds.length>0, "empty tokenIds array");
+    require(tokenIds.length > 0, "empty tokenIds array");
     // Checks tokenIds size doesn't exceed limit
-    require(tokenIds.length<=25, "25 max per call allowed");
+    require(tokenIds.length <= 25, "25 max per call allowed");
     // Checks if choice is correct
-    require(choice>=0&&choice<choices.length, "this choice doesn't exist");
+    require(
+      choice >= 0 && choice < choices.length,
+      "this choice doesn't exist"
+    );
     // Checks if tokens are not already used
-    for(uint8 i=0;i < tokenIds.length;i++){
+    for (uint8 i = 0; i < tokenIds.length; i++) {
       require(!usedTokens[tokenIds[i]], "one token was already used");
-      require(pianoKing.ownerOf(tokenIds[i])==msg.sender, "one token is not yours");
+      require(
+        pianoKing.ownerOf(tokenIds[i]) == msg.sender,
+        "one token is not yours"
+      );
     }
-    votes[choice] += uint16(tokenIds.length);
-    for(uint8 i=0;i < tokenIds.length;i++){
+    votes[choice] += uint8(tokenIds.length);
+    for (uint8 i = 0; i < tokenIds.length; i++) {
       usedTokens[tokenIds[i]] = true;
     }
   }
 
   /**
-  * @dev For Test Purposes only ?
+   * @dev For Test Purposes only ?
    */
   receive() external payable {}
 
-  
   /**
    * @dev Gets the vote array
    */
-  function getVotes() external view returns (uint16[] memory) {
+  function getVotes() external view returns (uint8[] memory) {
     return votes;
   }
 
@@ -84,15 +89,15 @@ contract PianoKingVote is Ownable, ReentrancyGuard {
    */
   function startVote(address[] memory _choices) external onlyOwner {
     require(!voteOpen, "Already ongoing vote");
-    require(_choices.length>0, "At least 1 choice");
-    require(_choices.length<10, "max 10 choices");
-    for(uint8 i=0;i < _choices.length;i++){
+    require(_choices.length > 0, "At least 1 choice");
+    require(_choices.length < 10, "max 10 choices");
+    for (uint8 i = 0; i < _choices.length; i++) {
       require(_choices[i] != address(0), "Invalid address");
     }
     choices = _choices;
-    votes = new uint16[](_choices.length);
-    for(uint16 i=1;i<pianoKing.totalSupply()+1;i++){
-          delete(usedTokens[i]);
+    votes = new uint8[](_choices.length);
+    for (uint16 i = 1; i < pianoKing.totalSupply() + 1; i++) {
+      delete (usedTokens[i]);
     }
     voteOpen = true;
   }
@@ -103,14 +108,17 @@ contract PianoKingVote is Ownable, ReentrancyGuard {
   function endVote() external onlyOwner {
     require(voteOpen, "No ongoing vote");
     uint16 total = 0;
-    for(uint8 i=0;i<choices.length;i++){
-      total+=votes[i];
+    for (uint8 i = 0; i < choices.length; i++) {
+      total += votes[i];
     }
-    require(total>0&&pianoKing.totalSupply()/total<=10, "Not enough votes");
+    require(
+      total > 0 && pianoKing.totalSupply() / total <= 10,
+      "Not enough votes"
+    );
     uint16 maxVote = votes[0];
     uint8 index = 0;
-    for(uint8 i=1;i<choices.length;i++){
-      if(votes[i]>maxVote){
+    for (uint8 i = 1; i < choices.length; i++) {
+      if (votes[i] > maxVote) {
         maxVote = votes[i];
         index = i;
       }
