@@ -19,9 +19,9 @@ contract PianoKingRNConsumer is Ownable, VRFConsumerBase {
   }
 
   // The random number used as a seed for the random sequence for batch mint
-  uint128 internal randomSeed;
+  uint256 internal randomSeed;
   // The random number used as the base for the incrementor in the sequence
-  uint128 internal randomIncrementor;
+  uint256 internal randomIncrementor;
 
   // Indicate the status of the random number
   // Since 0 is equal to undefined then it will be its default value
@@ -73,16 +73,14 @@ contract PianoKingRNConsumer is Ownable, VRFConsumerBase {
     internal
     override
   {
-    // Put the first 16 bytes (equivalent to a uint128) into randomSeed
-    randomSeed = uint128(
+    // Put 16 bytes of randomNumber into randomSeed
+    randomSeed =
       randomNumber &
-        0xffffffffffffffffffffffffffffffff00000000000000000000000000000000
-    );
-    // Put the last 16 bytes (equivalent to a uint128) into randomIncrementor
-    randomIncrementor = uint128(
+      0xffffffffffffffff0000000000000000ffffffffffffffff0000000000000000;
+    // Put the other 16 bytes of randomNumber into randomIncrementor
+    randomIncrementor =
       randomNumber &
-        0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff
-    );
+      0x0000000000000000ffffffffffffffff0000000000000000ffffffffffffffff;
     // We're making sure the random incrementor is high enough and most
     // importantly not zero
     if (randomIncrementor < 10000) {
@@ -102,7 +100,7 @@ contract PianoKingRNConsumer is Ownable, VRFConsumerBase {
   function getRandomNumbers()
     external
     view
-    returns (uint128 _randomSeed, uint128 _randomIncrementor)
+    returns (uint256 _randomSeed, uint256 _randomIncrementor)
   {
     require(randomNumberStatus == RNStatus.received, "Random number not ready");
     _randomSeed = randomSeed;
