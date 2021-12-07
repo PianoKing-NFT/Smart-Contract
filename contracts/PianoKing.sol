@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
 import "./lib/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./PianoKingWhitelist.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/interfaces/IERC2981.sol";
-import "./PianoKingRNConsumer.sol";
+import "./interfaces/IPianoKingRNConsumer.sol";
 
 /**
  * @dev The contract of Piano King NFTs.
@@ -58,7 +57,7 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
   // transactions for batch mints
   uint16 internal lastBatchIndex;
 
-  PianoKingRNConsumer public pianoKingRNConsumer;
+  IPianoKingRNConsumer public pianoKingRNConsumer;
   PianoKingWhitelist public pianoKingWhitelist;
   // Address authorized to withdraw the funds
   address public pianoKingWallet = 0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586;
@@ -78,7 +77,7 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     require(_pianoKingRNConsumer != address(0), "Invalid address");
     require(_pianoKingFunds != address(0), "Invalid address");
     pianoKingWhitelist = PianoKingWhitelist(_pianoKingWhitelistAddress);
-    pianoKingRNConsumer = PianoKingRNConsumer(_pianoKingRNConsumer);
+    pianoKingRNConsumer = IPianoKingRNConsumer(_pianoKingRNConsumer);
     pianoKingFunds = _pianoKingFunds;
   }
 
@@ -391,7 +390,7 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
    */
   function setRNConsumerContract(address addr) external onlyOwner {
     require(addr != address(0), "Invalid address");
-    pianoKingRNConsumer = PianoKingRNConsumer(addr);
+    pianoKingRNConsumer = IPianoKingRNConsumer(addr);
   }
 
   /**
