@@ -386,6 +386,15 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
   }
 
   /**
+   * @dev Set the address of the contract meant to request the
+   * random number
+   */
+  function setRNConsumerContract(address addr) external onlyOwner {
+    require(addr != address(0), "Invalid address");
+    pianoKingRNConsumer = PianoKingRNConsumer(addr);
+  }
+
+  /**
    * @dev Set the base URI of every token URI
    */
   function setBaseURI(string memory uri) external onlyOwner {
