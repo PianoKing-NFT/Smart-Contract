@@ -49,9 +49,9 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
   address[] public preMintAddresses;
 
   // The random number used as a seed for the random sequence for batch mint
-  uint128 internal randomSeed;
+  uint256 internal randomSeed;
   // The random number used as the base for the incrementor in the sequence
-  uint128 internal randomIncrementor;
+  uint256 internal randomIncrementor;
   // Indicate if the random number is ready to be used
   bool internal canUseRandomNumber;
   // Allow to keep track of iterations through multiple consecutives
@@ -153,7 +153,7 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
    */
   function fetchRandomNumbers() internal {
     // Will revert if the numbers are not ready
-    (uint128 seed, uint128 incrementor) = pianoKingRNConsumer
+    (uint256 seed, uint256 incrementor) = pianoKingRNConsumer
       .getRandomNumbers();
     // By checking this we enforce the use of a different random number for
     // each batch mint
@@ -234,9 +234,7 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     } else {
       // Save the token id in the random number variable to continue the sequence
       // on next call
-      // The token id is between 1 and 10000, so no worries on this side,
-      // it can even fit in a uint16
-      randomSeed = uint128(tokenId);
+      randomSeed = tokenId;
       // Save the index to set as start of next call
       lastBatchIndex = uint16(end);
     }
