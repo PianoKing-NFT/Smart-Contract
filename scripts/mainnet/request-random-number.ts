@@ -4,6 +4,7 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import { ethers } from "hardhat";
+import { waitForRightGasPrice } from "../utils";
 
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -20,6 +21,7 @@ async function main() {
     process.env.PIANO_KING_RN_CONSUMER as string
   );
 
+  await waitForRightGasPrice();
   // Request a random number to use as seed for the presale batch
   console.log("Initiating randomness request...");
   const randomnessTx = await pianoKingRNConsumer.requestRandomNumber();
