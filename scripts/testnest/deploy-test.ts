@@ -36,10 +36,15 @@ async function main() {
     ethers.utils.parseEther("0.1")
   );
   await pianoKingRNConsumer.deployed();
+  console.log(
+    "Piano King RNConsumer deployed to:",
+    pianoKingRNConsumer.address
+  );
 
   const PianoKingFunds = await ethers.getContractFactory("PianoKingFunds");
   const pianoKingFunds = await PianoKingFunds.deploy();
   await pianoKingFunds.deployed();
+  console.log("Piano King Funds deployed to:", pianoKingFunds.address);
 
   const PianoKing = await ethers.getContractFactory("MockPianoKing");
   const pianoKing = await PianoKing.deploy(
@@ -57,11 +62,11 @@ async function main() {
 
   const linkToken = await ethers.getContractAt(
     linkABI,
-    process.env.LINK as string
+    "0x01BE23585060835E02B77ef475b0Cc51aA1e0709"
   );
 
   const transferTx = await linkToken.transfer(
-    pianoKing.address,
+    pianoKingRNConsumer.address,
     ethers.utils.parseEther("5")
   );
   await transferTx.wait(1);
