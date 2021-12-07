@@ -39,11 +39,6 @@ async function main() {
   console.log(`The random seed is ${randomSeed}.`);
   console.log(`The random incrementor is ${randomIncrementor}.`);
 
-  console.log("Checking gas price...");
-  // Will throw an Error if the gas price is too high
-  await checkGasPrice();
-
-  console.log("Gas price below 90 Gwei, ready to mint...");
   await executeBatchMint(
     async (addressCount) => {
       // This promise will resolve once the gas price is below 90 Gwei
@@ -55,7 +50,7 @@ async function main() {
       const tx = await pianoKing.batchMint(addressCount);
       const receipt = await tx.wait(1);
       console.log(
-        `One transaction has been completed for ${addressCount} address and a total of ${receipt.gasUsed} gas`
+        `One transaction has been completed for ${addressCount} addresses and a total of ${receipt.gasUsed.toString()} gas`
       );
     },
     pianoKing.preMintAllowance,

@@ -55,7 +55,7 @@ async function main() {
       const tx = await pianoKing.presaleMint(addressCount);
       const receipt = await tx.wait(1);
       console.log(
-        `One transaction has been completed for ${addressCount} address and a total of ${receipt.gasUsed} gas`
+        `One transaction has been completed for ${addressCount} addresses and a total of ${receipt.gasUsed.toString()} gas`
       );
     },
     pianoKingWhitelist.getWhitelistAllowance,

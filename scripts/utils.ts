@@ -17,7 +17,7 @@ export async function waitForRightGasPrice() {
       } catch (error) {
         console.log("Gas price too high. Waiting for the right moment...");
       }
-    }, 1000 * 60 * 5);
+    }, 5000);
   });
 }
 
@@ -39,11 +39,11 @@ export async function executeBatchMint(
 ) {
   let count = 0;
   let addressIndex = 0;
-  while (count < batchSize) {
+  while (count < batchSize && addressIndex < addresses.length) {
     let callCount = 0;
     let addressCount = 0;
     // Limit each call to a given number of tokens
-    while (callCount <= maxPerCall) {
+    while (callCount <= maxPerCall && addressIndex < addresses.length) {
       callCount += (await getAllowanceFn(addresses[addressIndex])).toNumber();
       addressIndex++;
       addressCount++;
