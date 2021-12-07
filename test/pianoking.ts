@@ -182,6 +182,21 @@ describe("Piano King", function () {
     );
   });
 
+  it("Should set the RNConsumer contract address", async () => {
+    const accounts = await ethers.getSigners();
+
+    // Get an address to set the RNConsumer contract to
+    const rnConsumerAddress = accounts[10];
+    // Set the new RNConsumer contract address
+    const tx = await pianoKing.setRNConsumerContract(rnConsumerAddress.address);
+    await tx.wait(1);
+
+    // Check that the address was changed correctly
+    expect(await pianoKing.pianoKingRNConsumer()).to.be.equal(
+      rnConsumerAddress.address
+    );
+  });
+
   it("Should add 2 addresses as pre-approved addresses", async () => {
     // Get the two addresses to add
     const accounts = await ethers.getSigners();
