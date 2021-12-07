@@ -58,7 +58,7 @@ async function main() {
     1000,
     100
   );
-  console.log("All transactions sent! Waiting for the confirmations...");
+  console.log("Batch mint completed successfully!");
 }
 
 // We recommend this pattern to be able to use async/await everywhere

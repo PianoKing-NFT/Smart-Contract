@@ -13,45 +13,24 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
   // We get the contract to deploy
-  /**
-   * Idea for deployment: Listen to gas price with Etherscan API and trigger
-   * the deployment of the contracts at a less expensive time
-   */
 
-  const pianoKing = await ethers.getContractAt(
-    "MockPianoKing",
-    process.env.PIANO_KING as string
-  );
-  console.log("Piano King deployed to:", pianoKing.address);
-
+  console.log("Fetching Piano King RNConsumer smart contract...");
   const pianoKingRNConsumer = await ethers.getContractAt(
     "PianoKingRNConsumer",
     process.env.PIANO_KING_RN_CONSUMER as string
   );
-  console.log(
-    "Piano King RN Consumer deployed to:",
-    pianoKingRNConsumer.address
-  );
 
-  const addresses: string[] = [];
-  for (let i = 0; i < 250; i++) {
-    // Send everything to the same address to have control over the supply
-    // on the testnets
-    addresses.push(process.env.ADDRESS as string);
-  }
-
-  // Request a random number to use as seed for the batch
+  // Request a random number to use as seed for the presale batch
+  console.log("Initiating randomness request...");
   const randomnessTx = await pianoKingRNConsumer.requestRandomNumber();
   await randomnessTx.wait(1);
   console.log("Random number requested...");
 
+  // Listen to RandomNumberReceived to notify us when it is received
   pianoKingRNConsumer.on("RandomNumberReceived", async () => {
-    console.log("Random number received.");
-    const tx = await pianoKing.doBatchMint(addresses, 125);
-    await tx.wait(1);
-    const tx2 = await pianoKing.doBatchMint(addresses, 125);
-    await tx2.wait(1);
-    console.log("Presale mint completed.");
+    console.log(
+      "Random number received. You can proceed to execute the batch mint."
+    );
   });
 }
 
