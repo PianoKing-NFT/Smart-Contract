@@ -23,9 +23,12 @@ export async function waitForRightGasPrice() {
 
 export async function checkGasPrice() {
   const gasPrice = await ethers.provider.getGasPrice();
-  console.log("Current gas price in Wei: ", gasPrice.toString());
+  console.log(
+    "Current gas price in Gwei: ",
+    ethers.utils.formatUnits(gasPrice, "gwei")
+  );
   // If the gas price is above 90 Gwei we throw an error
-  if (gasPrice.gt(ethers.utils.parseEther("0.00000009"))) {
+  if (gasPrice.gt(ethers.utils.parseUnits("90", "gwei"))) {
     throw new Error("Gas price too high. Wait a moment and try again.");
   }
 }

@@ -192,10 +192,7 @@ describe("Piano King Private", function () {
   });
 
   it("Should retrieve funds received as royalties", async function () {
-    // The creator should have the default balance of 10,000 ETH
-    expect(await ethers.provider.getBalance(creator.address)).to.be.equal(
-      ethers.utils.parseEther("10000")
-    );
+    const creatorBalance = await ethers.provider.getBalance(creator.address);
 
     // Mint a token
     const tx = await pianoKingPrivate
@@ -235,7 +232,7 @@ describe("Piano King Private", function () {
     // 0.02/(0.025+0.02) ~ 0.4444 => 44.44%
     // 0.4444 * 1 ETH = 0.4444
     expect(await ethers.provider.getBalance(creator.address)).to.be.closeTo(
-      ethers.utils.parseEther("10000.4444"),
+      creatorBalance.add(ethers.utils.parseEther("0.4444")),
       ethers.utils.parseEther("0.0001").toNumber()
     );
     // 0.025/(0.025+0.02) ~ 0.5556 => 55.56%
