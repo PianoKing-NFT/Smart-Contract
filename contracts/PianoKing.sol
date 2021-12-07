@@ -27,8 +27,8 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
   using Strings for uint256;
 
   uint256 private constant MAX_TOKEN_PER_ADDRESS = 25;
-  // The amount in Wei (0.2 ETH by default) required to give this contract to mint an NFT
-  // for the 4000 tokens following the 1000 in presale
+  // The amount in Wei (0.2 ETH by default) required to give to this contract
+  // in order to premint an NFT for the 7000 tokens following the 1000 in presale
   uint256 public constant MIN_PRICE = 200000000000000000;
   // The royalties taken on each sale. Can range from 0 to 10000
   // 500 => 5%
@@ -37,7 +37,7 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
   uint256 public totalSupply;
   // TO-DO: replace this url by the base url where the metadata
   // of each token will be stored.
-  string private baseURI = "https://example.com/";
+  string public baseURI = "https://example.com/";
   // The supply left before next batch mint
   // Start at 0 as there is no premint for presale
   uint256 public supplyLeft = 0;
@@ -61,13 +61,13 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
   PianoKingRNConsumer public pianoKingRNConsumer;
   PianoKingWhitelist public pianoKingWhitelist;
   // Address authorized to withdraw the funds
-  address internal pianoKingWallet = 0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586;
+  address public pianoKingWallet = 0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586;
   // Address where the royalties should be sent to
-  address internal pianoKingFunds;
+  address public pianoKingFunds;
 
   // Doesn't have to be defined straight away, can be defined later
   // at least before phase 2
-  address internal pianoKingDutchAuction;
+  address public pianoKingDutchAuction;
 
   constructor(
     address _pianoKingWhitelistAddress,
@@ -95,9 +95,6 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
    * @dev Premint a token for a given address.
    * Meant to be used by the Dutch Auction contract or anyone wishing to
    * offer a token to someone else or simply paying the gas fee for that person
-   * Improvement propsals:
-   * - Disable smart contract from calling this function by detecting if the sender
-   * has any code (but it could still be called from the constructor of a smart contract)
    */
   function preMintFor(address addr) public payable {
     // The presale mint has to be completed before this function can be called
@@ -121,6 +118,7 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
       "Above maximum"
     );
 
+    // Add the address to the list if it's not in there yet
     if (preMintAllowance[addr] == 0) {
       preMintAddresses.push(addr);
     }
@@ -202,7 +200,7 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
       uint256 allowance = getAllowance(addr);
       for (uint256 j = 0; j < allowance; j++) {
         // Generate a number from the random number for the given
-        // address and this given token to be
+        // address and this given token to be minted
         tokenId = generateTokenId(tokenId, lowerBound, upperBound, incrementor);
         _owners[tokenId] = addr;
         emit Transfer(address(0), addr, tokenId);
@@ -278,7 +276,8 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     uint256 incrementor
   ) internal pure returns (uint256 tokenId) {
     if (lowerBound < 8000) {
-      // Presale mint (1000 tokens)
+      // For the presale of 1000 tokens and the 7 batches of
+      // 1000 after  that
       tokenId = getTokenIdInRange(
         randomNumber,
         1009,
@@ -298,6 +297,15 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     }
   }
 
+  /**
+   * @dev Get a token id in a given range
+   * @param randomNumber True random number which has been previously provided by oracles
+   * or previous tokenId that was generated from it. Since we're generating a sequence
+   * of numbers defined by recurrence we need the previous number as the base for the next.
+   * @param lowerBound Lower bound of current batch
+   * @param upperBound Upper bound of current batch
+   * @param incrementor Random incrementor based on the random number provided by oracles
+   */
   function getTokenIdInRange(
     uint256 randomNumber,
     uint256 modulo,
@@ -306,9 +314,7 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     uint256 upperBound
   ) internal pure returns (uint256 tokenId) {
     // Special case in which the incrementor would be equivalent to 0
-    // so we need to add 1 to it. Letting such failure happen would not be
-    // fatal for the flow of minting other tokens but would be costly for us
-    // in terms of gas
+    // so we need to add 1 to it.
     if (incrementor % modulo == modulo - 1 - (lowerBound % modulo)) {
       incrementor += 1;
     }
@@ -321,8 +327,8 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
 
   /**
    * @dev Get the bounds of the range to generate the ids in
-   * @param lowerBound The starting position from which the tokenId will be randomly picked
-   * @param upperBound The ending position until which the tokenId will be randomly picked
+   * @return lowerBound The starting position from which the tokenId will be randomly picked
+   * @return upperBound The ending position until which the tokenId will be randomly picked
    */
   function getBounds()
     internal
@@ -379,11 +385,6 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
 
   /**
    * @dev Set the base URI of every token URI
-   * Improvement proposal:
-   * - This setter is here as a fallback in case a mistake is made
-   * while setting the base URI or one of the metadata. But in an optimal
-   * case preventing its edition would be better to assure the immutability
-   * of the data representing the NFTs
    */
   function setBaseURI(string memory uri) external onlyOwner {
     baseURI = uri;
@@ -394,9 +395,11 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
    * like for giveaway.
    */
   function setPreApprovedAddresses(
-    address[] calldata addrs,
-    uint256[] calldata amounts
+    address[] memory addrs,
+    uint256[] memory amounts
   ) external onlyOwner {
+    require(addrs.length <= 10, "Too many addresses");
+    require(addrs.length == amounts.length, "Arrays length do not match");
     for (uint256 i = 0; i < addrs.length; i++) {
       address addr = addrs[i];
       require(addr != address(0), "Invalid address");
@@ -463,6 +466,13 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
    */
   function getPianoKingWallet() external view returns (address) {
     return pianoKingWallet;
+  }
+
+  /**
+   * @dev Get the addresses that preminted
+   */
+  function getPremintAddresses() external view returns (address[] memory) {
+    return preMintAddresses;
   }
 
   /**

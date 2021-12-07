@@ -11,7 +11,7 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
  * from Chainlink VRF
  */
 contract PianoKingRNConsumer is Ownable, VRFConsumerBase {
-  // The 3 possibles status for the random number
+  // The 3 possible status for the random number
   enum RNStatus {
     undefined,
     requested,
@@ -24,6 +24,8 @@ contract PianoKingRNConsumer is Ownable, VRFConsumerBase {
   uint128 internal randomIncrementor;
 
   // Indicate the status of the random number
+  // Since 0 is equal to undefined then it will be its default value
+  // which is what we want
   RNStatus internal randomNumberStatus;
 
   // Data for chainlink
@@ -109,7 +111,7 @@ contract PianoKingRNConsumer is Ownable, VRFConsumerBase {
 
   /**
    * @dev Let the owner of the contract withdraw LINK from the smart contract.
-   * Can be useful if too much was sent or LINK are no longer need on the contract
+   * Can be useful if too much was sent or LINK are no longer needed on the contract
    */
   function withdrawLinkTokens(uint256 amount) external onlyOwner {
     LINK.transfer(msg.sender, amount);
