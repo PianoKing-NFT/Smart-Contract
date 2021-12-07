@@ -13,21 +13,25 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
   // We get the contract to deploy
-  /**
-   * Idea for deployment: Listen to gas price with Etherscan API and trigger
-   * the deployment of the contracts at a less expensive time
-   */
 
-  const pianoKing = await ethers.getContractAt(
-    "MockPianoKing",
-    process.env.PIANO_KING as string
+  console.log("Fetching Piano King RNConsumer smart contract...");
+  const pianoKingRNConsumer = await ethers.getContractAt(
+    "PianoKingRNConsumer",
+    process.env.PIANO_KING_RN_CONSUMER as string
   );
 
-  /* const setURITx = await pianoKing.setBaseURI(
-    "https://gateway.pinata.cloud/ipfs/QmPYV2ibmTkSHjag913wrQRLSZCAb8juPWnuTsmwaLabwN/"
-  );
-  await setURITx.wait(1); */
-  console.log(await pianoKing.tokenURI(2));
+  // Request a random number to use as seed for the presale batch
+  console.log("Initiating randomness request...");
+  const randomnessTx = await pianoKingRNConsumer.requestRandomNumber();
+  await randomnessTx.wait(1);
+  console.log("Random number requested...");
+
+  // Listen to RandomNumberReceived to notify us when it is received
+  pianoKingRNConsumer.on("RandomNumberReceived", async () => {
+    console.log(
+      "Random number received. You can proceed to execute the batch mint."
+    );
+  });
 }
 
 // We recommend this pattern to be able to use async/await everywhere

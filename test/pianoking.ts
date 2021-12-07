@@ -126,7 +126,7 @@ describe("Piano King", function () {
     );
   });
 
-  /* it("Should set the piano king wallet address", async () => {
+  it("Should set the piano king wallet address", async () => {
     // The address should be the one defined before in the beforeEach hook
     expect(await pianoKing.pianoKingWallet()).to.be.equal(
       "0xA263f5e0A44Cb4e22AfB21E957dE825027A1e586"
@@ -143,7 +143,7 @@ describe("Piano King", function () {
     expect(await pianoKing.pianoKingWallet()).to.be.equal(
       newPianoKingWallet.address
     );
-  }); */
+  });
 
   it("Should set the white list address", async () => {
     // The address should be the one defined before in the beforeEach hook
@@ -162,7 +162,7 @@ describe("Piano King", function () {
     );
   });
 
-  /* it("Should set the Dutch Auction address", async () => {
+  it("Should set the Dutch Auction address", async () => {
     // The address should be the zero address as it wasn't defined before
     expect(await pianoKing.pianoKingDutchAuction()).to.be.equal(
       ethers.constants.AddressZero
@@ -188,10 +188,10 @@ describe("Piano King", function () {
     const address2 = accounts[6];
 
     // For now these addresses should not have any pre approved allowance
-    expect(await pianoKing.preApprovedAddress(address1.address)).to.be.equal(0);
-    expect(await pianoKing.preApprovedAddress(address2.address)).to.be.equal(0);
+    expect(await pianoKing.preMintAllowance(address1.address)).to.be.equal(0);
+    expect(await pianoKing.preMintAllowance(address2.address)).to.be.equal(0);
 
-    const tx = await pianoKing.addPreApprovedAddresses(
+    const tx = await pianoKing.setPreApprovedAddresses(
       [address1.address, address2.address],
       // The first address will have a pre-approved allowance of 2 and
       // the second a pre-approved allowance of 4
@@ -200,9 +200,9 @@ describe("Piano King", function () {
     await tx.wait(1);
 
     // Check that the allowance have been set properly
-    expect(await pianoKing.preApprovedAddress(address1.address)).to.be.equal(2);
-    expect(await pianoKing.preApprovedAddress(address2.address)).to.be.equal(4);
-  }); 
+    expect(await pianoKing.preMintAllowance(address1.address)).to.be.equal(2);
+    expect(await pianoKing.preMintAllowance(address2.address)).to.be.equal(4);
+  });
 
   it("Should set the base uri properly", async () => {
     // It should be equal to the default value
@@ -213,7 +213,7 @@ describe("Piano King", function () {
 
     // The default URI should have been changed to the new one
     expect(await pianoKing.baseURI()).to.be.equal("ipfs://ersddsdfefwerwr/");
-  }); */
+  });
 
   it("Should mint and distribute the tokens bought during the presale", async function () {
     const accounts = await ethers.getSigners();
