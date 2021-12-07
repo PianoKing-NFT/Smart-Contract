@@ -74,6 +74,9 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     address _pianoKingRNConsumer,
     address _pianoKingFunds
   ) ERC721("Piano King", "PK") {
+    require(_pianoKingWhitelistAddress != address(0), "Invalid address");
+    require(_pianoKingRNConsumer != address(0), "Invalid address");
+    require(_pianoKingFunds != address(0), "Invalid address");
     pianoKingWhitelist = PianoKingWhitelist(_pianoKingWhitelistAddress);
     pianoKingRNConsumer = PianoKingRNConsumer(_pianoKingRNConsumer);
     pianoKingFunds = _pianoKingFunds;
@@ -97,6 +100,7 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
    * offer a token to someone else or simply paying the gas fee for that person
    */
   function preMintFor(address addr) public payable {
+    require(addr != address(0), "Invalid address");
     // The presale mint has to be completed before this function can be called
     require(totalSupply >= 1000, "Presale mint not completed");
     bool isDutchAuction = totalSupply >= 8000;
