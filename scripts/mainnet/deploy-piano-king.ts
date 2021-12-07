@@ -4,7 +4,7 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import { ethers } from "hardhat";
-import { checkGasPrice } from "../utils";
+import { checkGasPrice, waitForRightGasPrice } from "../utils";
 
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -17,7 +17,7 @@ async function main() {
 
   // Checking the gas price and will throw an error to stop
   // the deployment if the gas price are too high
-  await checkGasPrice();
+  await waitForRightGasPrice();
 
   console.log("Deploying the random number consumer contract...");
   const PianoKingRNConsumer = await ethers.getContractFactory(
@@ -40,12 +40,14 @@ async function main() {
     pianoKingRNConsumer.address
   );
 
+  await waitForRightGasPrice();
   console.log("Deploying the contract receiving the royalties...");
   const PianoKingFunds = await ethers.getContractFactory("PianoKingFunds");
   const pianoKingFunds = await PianoKingFunds.deploy();
   await pianoKingFunds.deployed();
   console.log("Piano King Funds deployed to:", pianoKingFunds.address);
 
+  await waitForRightGasPrice();
   console.log("Deploying the main ERC721 contract...");
   const PianoKing = await ethers.getContractFactory("PianoKing");
   const pianoKing = await PianoKing.deploy(
@@ -59,6 +61,7 @@ async function main() {
   await pianoKing.deployed();
   console.log("Piano King deployed to:", pianoKing.address);
 
+  await waitForRightGasPrice();
   console.log("Setting base url for NFTs metadata...");
   const setURITx = await pianoKing.setBaseURI(
     process.env.IPFS_BASE_URL as string
