@@ -61,13 +61,13 @@ async function main() {
   await pianoKing.deployed();
   console.log("Piano King deployed to:", pianoKing.address);
 
-  await waitForRightGasPrice();
+  /* await waitForRightGasPrice();
   console.log("Setting base url for NFTs metadata...");
   const setURITx = await pianoKing.setBaseURI(
     process.env.IPFS_BASE_URL as string
   );
   await setURITx.wait(1);
-  console.log("Base URL set.");
+  console.log("Base URL set."); */
 
   console.log("Deployment completed successfully!");
 }

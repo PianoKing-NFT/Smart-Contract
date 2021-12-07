@@ -11,15 +11,6 @@ import "./interfaces/IPianoKingRNConsumer.sol";
 
 /**
  * @dev The contract of Piano King NFTs.
- * As minting batch of tokens is a native feature of ERC1155, using
- * this standard can be discussed. Noting however that ERC1155 is
- * not yet supported everywhere.
- * For example Metamask has only a partial support of ERC1155 for now
- * (they can be viewed but not transfered).
- * OpenSea does support them however.
- * Considering Piano King use case it may not be guarranteed that using
- * ERC1155 will further reduce gas fee. With the ERC1155 we interact with just
- * one mapping during mint instead of two for ERC721, but it is a nested mapping.
  */
 contract PianoKing is ERC721, Ownable, IERC2981 {
   using Address for address payable;
@@ -34,9 +25,9 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
   uint16 internal constant ROYALTIES = 500;
   // The current minted supply
   uint256 public totalSupply;
-  // TO-DO: replace this url by the base url where the metadata
-  // of each token will be stored.
-  string public baseURI = "https://example.com/";
+  // The base url for the metadata of each token
+  string public baseURI =
+    "ipfs://QmX1wiZB72EnXdTxQCeZhRxtmT9GkBuWpD7TtDrfAcSio4/";
   // The supply left before next batch mint
   // Start at 0 as there is no premint for presale
   uint256 public supplyLeft = 0;
@@ -72,7 +63,7 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
     address _pianoKingWhitelistAddress,
     address _pianoKingRNConsumer,
     address _pianoKingFunds
-  ) ERC721("Piano King", "PK") {
+  ) ERC721("Piano King NFT", "PK") {
     require(_pianoKingWhitelistAddress != address(0), "Invalid address");
     require(_pianoKingRNConsumer != address(0), "Invalid address");
     require(_pianoKingFunds != address(0), "Invalid address");
