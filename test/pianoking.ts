@@ -222,7 +222,9 @@ describe("Piano King", function () {
 
   it("Should set the base uri properly", async () => {
     // It should be equal to the default value
-    expect(await pianoKing.baseURI()).to.be.equal("https://example.com/");
+    expect(await pianoKing.baseURI()).to.be.equal(
+      "ipfs://QmX1wiZB72EnXdTxQCeZhRxtmT9GkBuWpD7TtDrfAcSio4/"
+    );
 
     const tx = await pianoKing.setBaseURI("ipfs://ersddsdfefwerwr/");
     await tx.wait(1);
