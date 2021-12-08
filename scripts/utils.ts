@@ -47,9 +47,15 @@ export async function executeBatchMint(
     let addressCount = 0;
     // Limit each call to a given number of tokens
     while (callCount <= maxPerCall && addressIndex < addresses.length) {
-      callCount += (await getAllowanceFn(addresses[addressIndex])).toNumber();
+      const allowance = (
+        await getAllowanceFn(addresses[addressIndex])
+      ).toNumber();
+      // Don't consider addresses with empty allowances
+      if (allowance > 0) {
+        addressCount++;
+      }
+      callCount += allowance;
       addressIndex++;
-      addressCount++;
     }
     await call(addressCount);
     count += callCount;

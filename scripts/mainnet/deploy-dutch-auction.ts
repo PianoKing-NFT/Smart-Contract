@@ -15,25 +15,33 @@ async function main() {
   // await hre.run('compile');
   // We get the contract to deploy
 
-  console.log("Fetching Piano King RNConsumer smart contract...");
-  const pianoKingRNConsumer = await ethers.getContractAt(
-    "PianoKingRNConsumer",
-    "0x25c246dA9775aEb0fa25773E7a703c762D0C3E58"
+  console.log("Fetching Piano King smart contract...");
+  const pianoKing = await ethers.getContractAt(
+    "PianoKing",
+    "0x725afa0c34bab44f5b1ef8f87c50438f934c1a85"
   );
 
   await waitForRightGasPrice();
-  // Request a random number to use as seed for the presale batch
-  console.log("Initiating randomness request...");
-  const randomnessTx = await pianoKingRNConsumer.requestRandomNumber();
-  await randomnessTx.wait(1);
-  console.log("Random number requested...");
+  console.log("Deploying the contract receiving the royalties...");
+  const PianoKingDutchAuction = await ethers.getContractFactory(
+    "PianoKingDutchAuction"
+  );
+  const pianoKingDutchAuction = await PianoKingDutchAuction.deploy(
+    pianoKing.address
+  );
+  await pianoKingDutchAuction.deployed();
+  console.log(
+    "Piano King Dutch Auction deployed to:",
+    pianoKingDutchAuction.address
+  );
 
-  // Listen to RandomNumberReceived to notify us when it is received
-  pianoKingRNConsumer.on("RandomNumberReceived", async () => {
-    console.log(
-      "Random number received. You can proceed to execute the batch mint."
-    );
-  });
+  await waitForRightGasPrice();
+  console.log("Setting address of Dutch Auction on Piano King...");
+  const setDutchAuctionTx = await pianoKing.setDutchAuction(
+    pianoKingDutchAuction.address
+  );
+  await setDutchAuctionTx.wait(1);
+  console.log("Dutch Auction set.");
 }
 
 // We recommend this pattern to be able to use async/await everywhere
