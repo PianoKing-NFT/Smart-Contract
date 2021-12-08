@@ -47,5 +47,7 @@ COINMARKETCAP_API_KEY=<YOUR_COINMARKET_API_KEY>
 # Current status of contracts
 
 - **Piano King Whitelist:** Deployed to Ethereum Mainnet - [0xB2E31C3D51bbfefB4653789CF0965f9dfa7C902a](https://etherscan.io/address/0xB2E31C3D51bbfefB4653789CF0965f9dfa7C902a)
-- **Piano King:** Under development - Planned deployment on Ethereum mainnet by December 8th
-- **Piano King Dutch Auction:** Under development - Maybe deployed later
+- **Piano King:** Deployed to Ethereum Mainnet - [0x725afa0c34bab44f5b1ef8f87c50438f934c1a85](https://etherscan.io/address/0x725afa0c34bab44f5b1ef8f87c50438f934c1a85)
+- **Piano King Dutch Auction:** Under development - Will be deployed later
+- **Piano King RN Consumer:** Deployed to Ethereum Mainnet - [0x25c246dA9775aEb0fa25773E7a703c762D0C3E58](https://etherscan.io/address/0x25c246da9775aeb0fa25773e7a703c762d0c3e58)
+- **Piano King Funds:** Deployed to Ethereum Mainnet - [0x832790EB7323d94DEFfA877AC9Eb843aed91EDd3](https://etherscan.io/address/0x832790eb7323d94deffa877ac9eb843aed91edd3)
