@@ -22,12 +22,12 @@ async function main() {
   console.log("Fetching the smart contracts...");
   const pianoKing = await ethers.getContractAt(
     "PianoKing",
-    process.env.PIANO_KING as string
+    "0x725afa0c34bab44f5b1ef8f87c50438f934c1a85"
   );
 
   const pianoKingRNConsumer = await ethers.getContractAt(
     "PianoKingRNConsumer",
-    process.env.PIANO_KING_RN_CONSUMER as string
+    "0x25c246dA9775aEb0fa25773E7a703c762D0C3E58"
   );
 
   const addresses = await pianoKing.getPremintAddresses();
