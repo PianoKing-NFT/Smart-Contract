@@ -394,6 +394,10 @@ contract PianoKing is ERC721, Ownable, IERC2981 {
   /**
    * @dev Set addresses directly in the list as if they preminted for free
    * like for giveaway.
+   * WARNING: MUST NOT BE CALLED.
+   * Calling this function would trigger an issue during the mint
+   * as the supplyLeft is not updated. Call preMintFor for
+   * each of the addresses wanted instead
    */
   function setPreApprovedAddresses(
     address[] memory addrs,
