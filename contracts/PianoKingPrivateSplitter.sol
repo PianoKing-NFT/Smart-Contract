@@ -18,7 +18,7 @@ contract PianoKingPrivateSplitter is OwnableUpgradeable {
   uint256 private minterRoyalties;
   uint256 private creatorRoyalties;
 
-  function initiliaze(
+  function initialize(
     address _creator,
     address _minter,
     uint256 _minterRoyalties,

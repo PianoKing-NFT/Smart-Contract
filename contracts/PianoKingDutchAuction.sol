@@ -105,10 +105,11 @@ contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
     // If the sender send enough to match the price then he/she wins that token
     require(msg.value >= price, "Not enough funds");
 
-    // Mint a random NFT for the buyer
-    pianoKing.preMintFor{ value: msg.value }(msg.sender);
     // Decrease by one the number of token
     currentAuction.tokensLeft -= 1;
+
+    // Mint a random NFT for the buyer
+    pianoKing.preMintFor{ value: msg.value }(msg.sender);
 
     emit Buy(msg.sender, msg.value);
   }
