@@ -86,7 +86,7 @@ contract PianoKingPrivate is
     // We use a minimal clone proxy to save cost compared to a regular
     // deploy
     address payable splitterClone = payable(splitterImplementation.clone());
-    PianoKingPrivateSplitter(splitterClone).initiliaze(
+    PianoKingPrivateSplitter(splitterClone).initialize(
       creator,
       minter,
       minterRoyalties,
