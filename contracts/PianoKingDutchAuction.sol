@@ -9,9 +9,6 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  * Dutch Auction contract for Piano King
  */
 contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
-  // 200 tokens available for sale per auction
-  uint256 public constant TOKEN_PER_AUCTION = 200;
-
   struct Auction {
     uint256 startingPrice;
     // Unix timestamp in seconds
@@ -20,13 +17,11 @@ contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
     uint256 expiresAt;
     // In Wei
     uint256 priceDeductionRate;
-    // The amount of tokens left in the auction
-    uint256 tokensLeft;
     // Minimum price at which a token can be sold
     uint256 reservePrice;
   }
 
-  PianoKing private pianoKing;
+  PianoKing private immutable pianoKing;
   // Id of the auction => auction
   mapping(uint256 => Auction) public auctions;
   // Counter to keep count of the auction ids
@@ -59,6 +54,8 @@ contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
     );
     // The Dutch Auction can only happen after the first 8000 tokens have been minted
     require(pianoKing.totalSupply() >= 8000, "Auction phase not started");
+    // If all the tokens have been sold but not minted yet, then we need to wait
+    require(pianoKing.supplyLeft() > 0, "No token available for sell");
     Auction storage auction = auctions[counter++];
     // The auction start right at this block timestamp
     auction.startAt = block.timestamp;
@@ -69,10 +66,6 @@ contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
     auction.priceDeductionRate = deductionRate;
     // The starting price
     auction.startingPrice = startingPrice;
-    // To follow the amount of tokens left in the auction
-    // 500 are to be sold, once 0 is reached the auction
-    // is considered finished
-    auction.tokensLeft = TOKEN_PER_AUCTION;
     // Below that price, the token cannot be sold
     auction.reservePrice = reservePrice;
   }
@@ -89,7 +82,7 @@ contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
     // Check if the auction has expired
     require(block.timestamp < currentAuction.expiresAt, "Auction expired");
     // If there's no token left then the auction is finished
-    require(currentAuction.tokensLeft > 0, "Auction finished");
+    require(pianoKing.supplyLeft() > 0, "Auction finished");
 
     // Get the elapsed time since start
     uint256 timeElapsed = block.timestamp - currentAuction.startAt;
@@ -105,10 +98,7 @@ contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
     // If the sender send enough to match the price then he/she wins that token
     require(msg.value >= price, "Not enough funds");
 
-    // Decrease by one the number of token
-    currentAuction.tokensLeft -= 1;
-
-    // Mint a random NFT for the buyer
+    // Premint an NFT for the buyer
     pianoKing.preMintFor{ value: msg.value }(msg.sender);
 
     emit Buy(msg.sender, msg.value);

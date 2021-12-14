@@ -133,7 +133,6 @@ describe("Dutch Auction", function () {
       startAt,
       expiresAt,
       priceDeductionRate,
-      tokensLeft,
       reservePrice,
     ] = await dutchAuction.auctions(0);
     const block = await ethers.provider.getBlock(blockHash);
@@ -145,7 +144,7 @@ describe("Dutch Auction", function () {
     expect(expiresAt).to.be.equal(block.timestamp + 5);
     expect(priceDeductionRate).to.be.equal(ethers.utils.parseEther("0.1"));
     // The amount of tokens always start at 200
-    expect(tokensLeft).to.be.equal(200);
+    expect(await pianoKing.supplyLeft()).to.be.equal(200);
     expect(reservePrice).to.be.equal(ethers.utils.parseEther("1"));
   });
 
@@ -182,16 +181,8 @@ describe("Dutch Auction", function () {
       value: ethers.utils.parseEther("1.7"),
     });
     buyTx.wait(1);
-    const [
-      startingPrice,
-      startAt,
-      expiresAt,
-      priceDeductionRate,
-      tokensLeft,
-      reservePrice,
-    ] = await dutchAuction.auctions(0);
     // One token has been given to the sender
-    expect(tokensLeft).to.be.equal(199);
+    expect(await pianoKing.supplyLeft()).to.be.equal(199);
   });
 
   it("Should not let sender buy if price doesn't match", async function () {

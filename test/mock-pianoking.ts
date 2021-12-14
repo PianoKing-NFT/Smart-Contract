@@ -354,16 +354,8 @@ describe("Mock Piano King", function () {
       value: ethers.utils.parseEther("2"),
     });
     await buyTx.wait(1);
-    const [
-      startingPrice,
-      startAt,
-      expiresAt,
-      priceDeductionRate,
-      tokensLeft,
-      reservePrice,
-    ] = await dutchAuction.auctions(0);
     // One token has been given to the sender
-    expect(tokensLeft).to.be.equal(199);
+    expect(await pianoKing.supplyLeft()).to.be.equal(199);
     // We expect to see the buyer address as the first in the array of addresses
     // which preminted a token
     expect(await pianoKing.preMintAddresses(0)).to.be.equal(buyer.address);
@@ -392,16 +384,8 @@ describe("Mock Piano King", function () {
       value: ethers.utils.parseEther("2"),
     });
     await buyTx.wait(1);
-    const [
-      startingPrice,
-      startAt,
-      expiresAt,
-      priceDeductionRate,
-      tokensLeft,
-      reservePrice,
-    ] = await dutchAuction.auctions(0);
     // One token has been given to the sender
-    expect(tokensLeft).to.be.equal(199);
+    expect(await pianoKing.supplyLeft()).to.be.equal(199);
     // We expect to see the buyer address as the first in the array of addresses
     // which preminted a token
     expect(await pianoKing.preMintAddresses(0)).to.be.equal(buyer.address);
