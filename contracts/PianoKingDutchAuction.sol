@@ -75,11 +75,25 @@ contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
    * can call this function
    */
   function buy() external payable nonReentrant {
+    uint256 price = getCurrentPrice();
+    // If the sender send enough to match the price then he/she wins that token
+    require(msg.value >= price, "Not enough funds");
+
+    // Premint an NFT for the buyer
+    pianoKing.preMintFor{ value: msg.value }(msg.sender);
+
+    emit Buy(msg.sender, msg.value);
+  }
+
+  /**
+   * @dev Get the current price of the ongoing auction
+   * If no auction is in progress, it will revert
+   */
+  function getCurrentPrice() public view returns (uint256) {
+    require(counter > 0, "No auction created");
     // The counter has been incremented on initialization, so the current id is
     // actually the counter - 1
     Auction storage currentAuction = auctions[counter - 1];
-
-    // Check if the auction has expired
     require(block.timestamp < currentAuction.expiresAt, "Auction expired");
     // If there's no token left then the auction is finished
     require(pianoKing.supplyLeft() > 0, "Auction finished");
@@ -95,12 +109,6 @@ contract PianoKingDutchAuction is Ownable, ReentrancyGuard {
       ? discountedPrice
       : currentAuction.reservePrice;
 
-    // If the sender send enough to match the price then he/she wins that token
-    require(msg.value >= price, "Not enough funds");
-
-    // Premint an NFT for the buyer
-    pianoKing.preMintFor{ value: msg.value }(msg.sender);
-
-    emit Buy(msg.sender, msg.value);
+    return price;
   }
 }
